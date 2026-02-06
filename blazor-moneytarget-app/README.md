@@ -1,11 +1,11 @@
-# 💰 Finance Manager - Blazor Web App
+# 💰 MoneyTarget - Blazor Web App
 
 Applicazione Web responsive per la gestione delle finanze personali, sviluppata in **C# / Blazor**.
 
 ## 📁 Struttura del Progetto
 
 ```
-blazor-finance-app/
+blazor-moneytarget-app/
 ├── Components/
 │   ├── Layout/
 │   │   ├── MainLayout.razor       # Layout principale con sidebar
@@ -13,20 +13,37 @@ blazor-finance-app/
 │   └── Pages/
 │       ├── Dashboard.razor        # Homepage con KPI e grafici
 │       ├── NuovaTransazione.razor # Form inserimento transazioni
-│       └── Transazioni.razor      # Lista completa transazioni
+│       ├── Transazioni.razor      # Lista completa transazioni
+│       ├── Budget.razor           # Gestione budget per categoria
+│       ├── Report.razor           # Report e grafici analitici
+│       ├── Categorie.razor        # CRUD categorie
+│       └── Impostazioni.razor     # Impostazioni utente
+├── Data/
+│   ├── Entities/
+│   │   └── Entities.cs            # Modelli Entity Framework
+│   ├── DTOs/
+│   │   └── DTOs.cs                # Data Transfer Objects
+│   ├── Repositories/
+│   │   └── FinanceRepository.cs   # Repository pattern
+│   └── FinanceDbContext.cs        # DbContext EF Core
+├── Database/
+│   ├── 001_CreateTables.sql       # Script creazione tabelle
+│   └── 002_StoredProcedures.sql   # Stored Procedures
 ├── Models/
-│   └── Transaction.cs             # Modelli dati (Transaction, KPI, etc.)
+│   └── Transaction.cs             # Modelli dati (Mock)
 ├── Services/
 │   ├── IFinanceService.cs         # Interfaccia servizio
-│   └── MockFinanceService.cs      # Implementazione Mock (dati finti)
+│   └── MockFinanceService.cs      # Implementazione Mock
 ├── wwwroot/
 │   └── css/
-│       └── app.css                # Stili Dark Theme (Bloomberg style)
+│       ├── app.css                # Stili Dark Theme
+│       └── pages.css              # Stili pagine aggiuntive
 ├── App.razor                      # Componente root HTML
 ├── Routes.razor                   # Configurazione routing
 ├── _Imports.razor                 # Import globali
 ├── Program.cs                     # Entry point applicazione
-└── FinanceApp.csproj             # File progetto .NET 8
+├── appsettings.json              # Configurazione
+└── MoneyTarget.csproj            # File progetto .NET 8
 ```
 
 ## 🚀 Setup in Visual Studio
@@ -40,11 +57,11 @@ blazor-finance-app/
 
 1. **Apri Visual Studio** e crea un nuovo progetto:
    - Seleziona "Blazor Web App"
-   - Nome: `FinanceApp`
+   - Nome: `MoneyTarget`
    - Framework: `.NET 8`
    - Render mode: `Interactive Server`
 
-2. **Copia i file** dalla cartella `blazor-finance-app/` nel progetto
+2. **Copia i file** dalla cartella `blazor-moneytarget-app/` nel progetto
 
 3. **Esegui l'applicazione**:
    ```bash
@@ -65,14 +82,32 @@ blazor-finance-app/
 - Form con validazione (`EditForm` + `DataAnnotationsValidator`)
 - Selezione tipo (Entrata/Uscita)
 - Input importo, data, categoria, descrizione
-- Riepilogo in tempo reale
-- Toast di conferma salvataggio
 
 ### Lista Transazioni
 - Visualizzazione completa con filtri
 - Ordinamento per data/importo
 - Ricerca testuale
-- Statistiche rapide (totale entrate/uscite)
+
+### Budget
+- Gestione budget mensili per categoria
+- Progress bar con stati (OK/Attenzione/Superato)
+- Modal per aggiunta/modifica
+
+### Report
+- Grafici andamento entrate/uscite
+- Risparmio cumulativo
+- Analisi spese per categoria
+- Insights automatici
+
+### Categorie
+- CRUD completo
+- Icon picker e color picker
+- Filtri per tipo (Entrata/Uscita)
+
+### Impostazioni
+- Profilo utente
+- Preferenze (tema, lingua, valuta)
+- Notifiche e sicurezza
 
 ## 🎨 Design
 
@@ -84,86 +119,37 @@ blazor-finance-app/
 - **Font**: Inter (UI), JetBrains Mono (numeri)
 - **Responsive**: Sidebar → Hamburger menu su mobile
 
-## 🔧 Personalizzazione per SQL Server
+## 🔧 Configurazione SQL Server
 
-Per collegare a SQL Server reale, sostituisci `MockFinanceService` con una nuova implementazione:
-
-```csharp
-// Services/SqlFinanceService.cs
-public class SqlFinanceService : IFinanceService
-{
-    private readonly string _connectionString;
-    
-    public SqlFinanceService(IConfiguration config)
-    {
-        _connectionString = config.GetConnectionString("DefaultConnection");
-    }
-    
-    public async Task<List<Transaction>> GetTransazioniRecentiAsync(int count = 10)
-    {
-        using var connection = new SqlConnection(_connectionString);
-        var query = "SELECT TOP(@Count) * FROM Transactions ORDER BY Data DESC";
-        return (await connection.QueryAsync<Transaction>(query, new { Count = count })).ToList();
-    }
-    
-    // ... altri metodi
-}
-```
-
-E in `Program.cs`:
-```csharp
-// Sostituisci:
-// builder.Services.AddScoped<IFinanceService, MockFinanceService>();
-// Con:
-builder.Services.AddScoped<IFinanceService, SqlFinanceService>();
-```
-
-## 📊 Schema Database SQL Server (suggerito)
-
+### 1. Esegui gli script SQL
 ```sql
-CREATE TABLE Transactions (
-    Id INT IDENTITY(1,1) PRIMARY KEY,
-    Data DATETIME2 NOT NULL,
-    Descrizione NVARCHAR(200) NOT NULL,
-    Categoria NVARCHAR(50) NOT NULL,
-    Importo DECIMAL(18,2) NOT NULL,
-    Tipo INT NOT NULL -- 0 = Entrata, 1 = Uscita
-);
-
-CREATE TABLE Categorie (
-    Id INT IDENTITY(1,1) PRIMARY KEY,
-    Nome NVARCHAR(50) NOT NULL
-);
-
--- Indici per performance
-CREATE INDEX IX_Transactions_Data ON Transactions(Data DESC);
-CREATE INDEX IX_Transactions_Categoria ON Transactions(Categoria);
+-- Esegui in ordine:
+-- Database/001_CreateTables.sql
+-- Database/002_StoredProcedures.sql
 ```
 
-## 📱 Screenshot Attesi
-
-### Desktop
-- Sidebar di navigazione a sinistra (260px)
-- Area contenuto centrale con grafici e tabelle
-- KPI cards in griglia 4 colonne
-
-### Mobile (< 768px)
-- Sidebar nascosta (hamburger menu)
-- KPI cards in singola colonna
-- Grafici a larghezza piena
-
-## 🔐 Valuta
-
-L'applicazione usa **Euro (€)** come valuta predefinita. Per cambiarla, modifica il metodo `FormatCurrency` nei componenti Razor:
-
-```csharp
-private string FormatCurrency(decimal amount)
+### 2. Configura la connection string
+In `appsettings.json`:
+```json
 {
-    return amount.ToString("C", new CultureInfo("it-IT")); // Euro
-    // return amount.ToString("C", new CultureInfo("en-US")); // Dollaro
+  "ConnectionStrings": {
+    "DefaultConnection": "Server=TUO_SERVER;Database=MoneyTargetDB;..."
+  }
 }
 ```
+
+### 3. Abilita Entity Framework
+In `Program.cs`, decommenta la sezione SQL Server.
+
+## 📊 Stored Procedures
+
+| Procedura | Descrizione |
+|-----------|-------------|
+| `sp_GetBudgetUtilization` | Confronto spese vs budget con % utilizzo |
+| `sp_GetDashboardSummary` | KPI per la dashboard |
+| `sp_GetAndamentoSaldo` | Andamento saldo ultimi N mesi |
+| `sp_GetSpesePorCategoria` | Ripartizione spese per grafico a torta |
 
 ---
 
-Sviluppato come demo per la gestione finanze personali in Blazor .NET 8.
+Sviluppato come applicazione completa per la gestione finanze personali in Blazor .NET 8.
