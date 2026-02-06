@@ -1,4 +1,4 @@
-namespace FinanceApp.Models;
+namespace MoneyTarget.Models;
 
 /// <summary>
 /// Modello per le transazioni finanziarie

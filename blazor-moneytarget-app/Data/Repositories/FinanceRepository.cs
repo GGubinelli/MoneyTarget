@@ -1,9 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Data.SqlClient;
-using FinanceApp.Data.Entities;
-using FinanceApp.Data.DTOs;
+using MoneyTarget.Data.Entities;
+using MoneyTarget.Data.DTOs;
 
-namespace FinanceApp.Data.Repositories;
+namespace MoneyTarget.Data.Repositories;
 
 /// <summary>
 /// Repository per l'accesso ai dati finanziari con SQL Server

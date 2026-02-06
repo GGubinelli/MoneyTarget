@@ -1,6 +1,6 @@
-using FinanceApp.Models;
+using MoneyTarget.Models;
 
-namespace FinanceApp.Services;
+namespace MoneyTarget.Services;
 
 /// <summary>
 /// Interfaccia per il servizio di gestione finanze

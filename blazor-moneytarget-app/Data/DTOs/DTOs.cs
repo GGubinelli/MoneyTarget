@@ -1,4 +1,4 @@
-namespace FinanceApp.Data.DTOs;
+namespace MoneyTarget.Data.DTOs;
 
 /// <summary>
 /// DTO per il risultato della Stored Procedure sp_GetBudgetUtilization

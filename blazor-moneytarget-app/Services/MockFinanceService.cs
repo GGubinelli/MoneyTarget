@@ -1,6 +1,6 @@
-using FinanceApp.Models;
+using MoneyTarget.Models;
 
-namespace FinanceApp.Services;
+namespace MoneyTarget.Services;
 
 /// <summary>
 /// Servizio Mock per la gestione delle finanze personali

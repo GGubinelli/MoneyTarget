@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
-using FinanceApp.Data.Entities;
+using MoneyTarget.Data.Entities;
 
-namespace FinanceApp.Data;
+namespace MoneyTarget.Data;
 
 /// <summary>
 /// DbContext per l'applicazione Finance Manager

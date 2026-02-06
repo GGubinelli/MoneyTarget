@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
-using FinanceApp.Services;
-using FinanceApp.Data;
-using FinanceApp.Data.Repositories;
+using MoneyTarget.Services;
+using MoneyTarget.Data;
+using MoneyTarget.Data.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
 

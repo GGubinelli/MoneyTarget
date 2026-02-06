@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace FinanceApp.Data.Entities;
+namespace MoneyTarget.Data.Entities;
 
 /// <summary>
 /// Entità Utente - Rappresenta un utente dell'applicazione
