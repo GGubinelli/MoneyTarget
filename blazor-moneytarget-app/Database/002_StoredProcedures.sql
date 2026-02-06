@@ -4,7 +4,7 @@
 -- e le confronta con il budget, restituendo la % di utilizzo
 -- ============================================
 
-USE FinanceAppDB;
+USE MoneyTargetDB;
 GO
 
 IF OBJECT_ID('dbo.sp_GetBudgetUtilization', 'P') IS NOT NULL

@@ -1,5 +1,5 @@
 -- ============================================
--- FINANCE APP - SQL SERVER DATABASE SCHEMA
+-- MONEYTARGET - SQL SERVER DATABASE SCHEMA
 -- Script T-SQL per la creazione delle tabelle
 -- ============================================
 
@@ -7,13 +7,13 @@ USE master;
 GO
 
 -- Crea il database se non esiste
-IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = N'FinanceAppDB')
+IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = N'MoneyTargetDB')
 BEGIN
-    CREATE DATABASE FinanceAppDB;
+    CREATE DATABASE MoneyTargetDB;
 END
 GO
 
-USE FinanceAppDB;
+USE MoneyTargetDB;
 GO
 
 -- ============================================
@@ -261,6 +261,6 @@ INSERT INTO dbo.Categorie (UtenteId, Nome, Tipo, Icona, Colore, IsPredefinita, O
 (@UtenteId, 'Altro Uscita', 1, N'📦', '#A9A9A9', 1, 99);
 */
 
-PRINT 'Database FinanceAppDB creato con successo!';
+PRINT 'Database MoneyTargetDB creato con successo!';
 PRINT 'Tabelle create: Utenti, Categorie, Transazioni, Budget, Asset, StoricoAsset, ImpostazioniUtente';
 GO
