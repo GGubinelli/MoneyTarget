@@ -1,0 +1,415 @@
+@page "/report"
+@using FinanceApp.Models
+@using FinanceApp.Services
+@inject IFinanceService FinanceService
+
+<PageTitle>Report - Finance Manager</PageTitle>
+
+<div class="report-page">
+    <div class="page-header">
+        <div class="header-content">
+            <h1 class="page-title">
+                <span class="page-icon">📈</span>
+                Report Finanziari
+            </h1>
+            <p class="page-subtitle">Analisi dettagliata delle tue finanze</p>
+        </div>
+        <div class="header-actions">
+            <select class="period-select" @bind="selectedPeriod" @bind:after="LoadDataAsync">
+                <option value="3">Ultimi 3 mesi</option>
+                <option value="6">Ultimi 6 mesi</option>
+                <option value="12">Ultimo anno</option>
+            </select>
+            <button class="btn btn-outline">
+                <span class="btn-icon">📥</span>
+                Esporta PDF
+            </button>
+        </div>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="loading-container">
+            <div class="loading-spinner"></div>
+            <p>Generazione report...</p>
+        </div>
+    }
+    else
+    {
+        <!-- KPI Periodo -->
+        <section class="report-kpi">
+            <div class="kpi-card">
+                <div class="kpi-icon income">📥</div>
+                <div class="kpi-content">
+                    <span class="kpi-label">Totale Entrate</span>
+                    <span class="kpi-value income">+@FormatCurrency(reportData.TotaleEntrate)</span>
+                    <span class="kpi-change @(reportData.VariazioneEntrate >= 0 ? "positive" : "negative")">
+                        @(reportData.VariazioneEntrate >= 0 ? "▲" : "▼") @Math.Abs(reportData.VariazioneEntrate).ToString("F1")% vs periodo precedente
+                    </span>
+                </div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-icon expense">📤</div>
+                <div class="kpi-content">
+                    <span class="kpi-label">Totale Uscite</span>
+                    <span class="kpi-value expense">-@FormatCurrency(reportData.TotaleUscite)</span>
+                    <span class="kpi-change @(reportData.VariazioneUscite <= 0 ? "positive" : "negative")">
+                        @(reportData.VariazioneUscite >= 0 ? "▲" : "▼") @Math.Abs(reportData.VariazioneUscite).ToString("F1")% vs periodo precedente
+                    </span>
+                </div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-icon savings">💰</div>
+                <div class="kpi-content">
+                    <span class="kpi-label">Risparmio Totale</span>
+                    <span class="kpi-value @(reportData.Risparmio >= 0 ? "income" : "expense")">
+                        @(reportData.Risparmio >= 0 ? "+" : "")@FormatCurrency(reportData.Risparmio)
+                    </span>
+                    <span class="kpi-subtext">Tasso risparmio: @reportData.TassoRisparmio.ToString("F1")%</span>
+                </div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-icon average">📊</div>
+                <div class="kpi-content">
+                    <span class="kpi-label">Media Mensile Uscite</span>
+                    <span class="kpi-value">@FormatCurrency(reportData.MediaMensileUscite)</span>
+                    <span class="kpi-subtext">su @selectedPeriod mesi</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Grafici -->
+        <div class="charts-grid">
+            <!-- Grafico Andamento Entrate/Uscite -->
+            <section class="chart-section">
+                <h2 class="section-title">
+                    <span class="section-icon">📊</span>
+                    Andamento Entrate vs Uscite
+                </h2>
+                <div class="chart-container bar-chart">
+                    <svg viewBox="0 0 600 300" class="chart-svg">
+                        <!-- Griglia -->
+                        @for (int i = 0; i <= 5; i++)
+                        {
+                            var y = 40 + (i * 44);
+                            <line x1="60" y1="@y" x2="580" y2="@y" stroke="#2a3441" stroke-width="1" />
+                            <text x="55" y="@(y + 4)" fill="#8a9bae" font-size="10" text-anchor="end">
+                                @((maxValue - (maxValue * i / 5)) / 1000).ToString("F0")k
+                            </text>
+                        }
+                        
+                        @{
+                            var barWidth = 35;
+                            var groupWidth = 90;
+                            var startX = 80;
+                        }
+                        
+                        @for (int i = 0; i < andamentoMensile.Count && i < 6; i++)
+                        {
+                            var item = andamentoMensile[i];
+                            var x = startX + (i * groupWidth);
+                            var entrateHeight = maxValue > 0 ? (double)item.Entrate / (double)maxValue * 200 : 0;
+                            var usciteHeight = maxValue > 0 ? (double)item.Uscite / (double)maxValue * 200 : 0;
+                            
+                            <!-- Barra Entrate -->
+                            <rect x="@x" y="@(260 - entrateHeight)" width="@barWidth" height="@entrateHeight" 
+                                  fill="#00D4AA" rx="4" class="bar-entrate">
+                                <title>Entrate @item.Mese: @FormatCurrency(item.Entrate)</title>
+                            </rect>
+                            
+                            <!-- Barra Uscite -->
+                            <rect x="@(x + barWidth + 5)" y="@(260 - usciteHeight)" width="@barWidth" height="@usciteHeight" 
+                                  fill="#f85149" rx="4" class="bar-uscite">
+                                <title>Uscite @item.Mese: @FormatCurrency(item.Uscite)</title>
+                            </rect>
+                            
+                            <!-- Label mese -->
+                            <text x="@(x + barWidth + 2)" y="280" fill="#8a9bae" font-size="11" text-anchor="middle">
+                                @item.Mese
+                            </text>
+                        }
+                        
+                        <!-- Legenda -->
+                        <rect x="480" y="15" width="12" height="12" fill="#00D4AA" rx="2" />
+                        <text x="496" y="25" fill="#f0f6fc" font-size="11">Entrate</text>
+                        <rect x="480" y="32" width="12" height="12" fill="#f85149" rx="2" />
+                        <text x="496" y="42" fill="#f0f6fc" font-size="11">Uscite</text>
+                    </svg>
+                </div>
+            </section>
+
+            <!-- Grafico Risparmio Cumulativo -->
+            <section class="chart-section">
+                <h2 class="section-title">
+                    <span class="section-icon">💹</span>
+                    Risparmio Cumulativo
+                </h2>
+                <div class="chart-container line-chart">
+                    <svg viewBox="0 0 600 300" class="chart-svg">
+                        <defs>
+                            <linearGradient id="savingsGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                                <stop offset="0%" style="stop-color:#a371f7;stop-opacity:0.4" />
+                                <stop offset="100%" style="stop-color:#a371f7;stop-opacity:0" />
+                            </linearGradient>
+                        </defs>
+                        
+                        <!-- Griglia -->
+                        @for (int i = 0; i <= 5; i++)
+                        {
+                            var y = 40 + (i * 44);
+                            <line x1="60" y1="@y" x2="580" y2="@y" stroke="#2a3441" stroke-width="1" />
+                        }
+                        
+                        @if (risparmioCumulativo.Any())
+                        {
+                            var maxSaving = risparmioCumulativo.Max(r => r.Valore);
+                            var minSaving = risparmioCumulativo.Min(r => r.Valore);
+                            var range = maxSaving - minSaving;
+                            if (range == 0) range = 1;
+                            
+                            var points = new List<string>();
+                            var xStep = 520.0 / Math.Max(risparmioCumulativo.Count - 1, 1);
+                            
+                            for (int i = 0; i < risparmioCumulativo.Count; i++)
+                            {
+                                var x = 60 + (i * xStep);
+                                var y = 260 - ((double)(risparmioCumulativo[i].Valore - minSaving) / (double)range * 200);
+                                points.Add($"{x.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)},{y.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)}");
+                            }
+                            
+                            <!-- Area -->
+                            var areaPath = $"M 60,260 L {string.Join(" L ", points)} L 580,260 Z";
+                            <path d="@areaPath" fill="url(#savingsGradient)" />
+                            
+                            <!-- Linea -->
+                            <polyline points="@string.Join(" ", points)" fill="none" stroke="#a371f7" stroke-width="3" 
+                                      stroke-linecap="round" stroke-linejoin="round" />
+                            
+                            <!-- Punti e label -->
+                            @for (int i = 0; i < risparmioCumulativo.Count; i++)
+                            {
+                                var x = 60 + (i * xStep);
+                                var y = 260 - ((double)(risparmioCumulativo[i].Valore - minSaving) / (double)range * 200);
+                                
+                                <circle cx="@x.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)" 
+                                        cy="@y.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)" 
+                                        r="5" fill="#0d1117" stroke="#a371f7" stroke-width="2">
+                                    <title>@risparmioCumulativo[i].Mese: @FormatCurrency(risparmioCumulativo[i].Valore)</title>
+                                </circle>
+                                
+                                <text x="@x.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)" y="280" 
+                                      fill="#8a9bae" font-size="10" text-anchor="middle">
+                                    @risparmioCumulativo[i].Mese
+                                </text>
+                            }
+                            
+                            <!-- Etichette Y -->
+                            @for (int i = 0; i <= 5; i++)
+                            {
+                                var y = 40 + (i * 44);
+                                var value = maxSaving - (range * i / 5);
+                                <text x="55" y="@(y + 4)" fill="#8a9bae" font-size="10" text-anchor="end">
+                                    @(value / 1000).ToString("F1")k
+                                </text>
+                            }
+                        }
+                    </svg>
+                </div>
+            </section>
+        </div>
+
+        <!-- Analisi Categorie -->
+        <section class="categories-analysis">
+            <h2 class="section-title">
+                <span class="section-icon">🏷️</span>
+                Analisi Spese per Categoria
+            </h2>
+            <div class="categories-table-container">
+                <table class="categories-table">
+                    <thead>
+                        <tr>
+                            <th>Categoria</th>
+                            <th class="text-right">Totale Speso</th>
+                            <th class="text-right">% sul Totale</th>
+                            <th class="text-right">Media Mensile</th>
+                            <th>Trend</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var cat in analisiCategorie.OrderByDescending(c => c.TotaleSpeso))
+                        {
+                            <tr>
+                                <td>
+                                    <div class="category-cell">
+                                        <span class="category-icon">@GetCategoryIcon(cat.Categoria)</span>
+                                        <span class="category-name">@cat.Categoria</span>
+                                    </div>
+                                </td>
+                                <td class="text-right amount">@FormatCurrency(cat.TotaleSpeso)</td>
+                                <td class="text-right">
+                                    <div class="percentage-bar">
+                                        <div class="percentage-fill" style="width: @cat.Percentuale.ToString("F0")%"></div>
+                                        <span class="percentage-text">@cat.Percentuale.ToString("F1")%</span>
+                                    </div>
+                                </td>
+                                <td class="text-right">@FormatCurrency(cat.MediaMensile)</td>
+                                <td>
+                                    <span class="trend-badge @(cat.Trend >= 0 ? "up" : "down")">
+                                        @(cat.Trend >= 0 ? "▲" : "▼") @Math.Abs(cat.Trend).ToString("F0")%
+                                    </span>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Insights -->
+        <section class="insights-section">
+            <h2 class="section-title">
+                <span class="section-icon">💡</span>
+                Insights e Suggerimenti
+            </h2>
+            <div class="insights-grid">
+                <div class="insight-card positive">
+                    <div class="insight-icon">✅</div>
+                    <div class="insight-content">
+                        <h4>Ottimo lavoro!</h4>
+                        <p>Il tuo tasso di risparmio è del @reportData.TassoRisparmio.ToString("F0")%, superiore alla media italiana del 10%.</p>
+                    </div>
+                </div>
+                <div class="insight-card warning">
+                    <div class="insight-icon">⚠️</div>
+                    <div class="insight-content">
+                        <h4>Attenzione</h4>
+                        <p>Le spese per "Intrattenimento" sono aumentate del 30% rispetto al mese scorso.</p>
+                    </div>
+                </div>
+                <div class="insight-card info">
+                    <div class="insight-icon">📌</div>
+                    <div class="insight-content">
+                        <h4>Suggerimento</h4>
+                        <p>Considera di aumentare il budget per "Investimenti" per raggiungere i tuoi obiettivi finanziari.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    }
+</div>
+
+@code {
+    private bool isLoading = true;
+    private int selectedPeriod = 6;
+    private ReportData reportData = new();
+    private List<AndamentoMensile> andamentoMensile = new();
+    private List<RisparmioCumulativo> risparmioCumulativo = new();
+    private List<AnalisiCategoria> analisiCategorie = new();
+    private decimal maxValue = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDataAsync();
+    }
+
+    private async Task LoadDataAsync()
+    {
+        isLoading = true;
+        try
+        {
+            await Task.Delay(300); // Simula caricamento
+            
+            // Mock data report
+            reportData = new ReportData
+            {
+                TotaleEntrate = 21700m,
+                TotaleUscite = 14850.40m,
+                Risparmio = 6849.60m,
+                TassoRisparmio = 31.6m,
+                MediaMensileUscite = 2475.07m,
+                VariazioneEntrate = 8.5m,
+                VariazioneUscite = -3.2m
+            };
+            
+            // Andamento mensile
+            andamentoMensile = new List<AndamentoMensile>
+            {
+                new() { Mese = "Lug", Entrate = 5700, Uscite = 2534 },
+                new() { Mese = "Ago", Entrate = 2850, Uscite = 2023.50m },
+                new() { Mese = "Set", Entrate = 3700, Uscite = 2399 },
+                new() { Mese = "Ott", Entrate = 2900, Uscite = 2189.30m },
+                new() { Mese = "Nov", Entrate = 2945, Uscite = 2049 },
+                new() { Mese = "Dic", Entrate = 5800, Uscite = 2799.30m }
+            };
+            
+            maxValue = Math.Max(andamentoMensile.Max(a => a.Entrate), andamentoMensile.Max(a => a.Uscite));
+            
+            // Risparmio cumulativo
+            decimal cumulative = 15000;
+            risparmioCumulativo = andamentoMensile.Select(a => {
+                cumulative += a.Entrate - a.Uscite;
+                return new RisparmioCumulativo { Mese = a.Mese, Valore = cumulative };
+            }).ToList();
+            
+            // Analisi categorie
+            var totaleSpese = 14850.40m;
+            analisiCategorie = new List<AnalisiCategoria>
+            {
+                new() { Categoria = "Affitto", TotaleSpeso = 5100, Percentuale = 34.3m, MediaMensile = 850, Trend = 0 },
+                new() { Categoria = "Spesa Alimentare", TotaleSpeso = 1890.10m, Percentuale = 12.7m, MediaMensile = 315, Trend = 5 },
+                new() { Categoria = "Bollette", TotaleSpeso = 991.30m, Percentuale = 6.7m, MediaMensile = 165.22m, Trend = 12 },
+                new() { Categoria = "Intrattenimento", TotaleSpeso = 890, Percentuale = 6.0m, MediaMensile = 148.33m, Trend = 30 },
+                new() { Categoria = "Investimenti", TotaleSpeso = 800, Percentuale = 5.4m, MediaMensile = 133.33m, Trend = -10 },
+                new() { Categoria = "Trasporti", TotaleSpeso = 598, Percentuale = 4.0m, MediaMensile = 99.67m, Trend = -5 },
+                new() { Categoria = "Ristoranti", TotaleSpeso = 592.50m, Percentuale = 4.0m, MediaMensile = 98.75m, Trend = 8 },
+                new() { Categoria = "Altro", TotaleSpeso = 1933, Percentuale = 13.0m, MediaMensile = 322.17m, Trend = 15 }
+            };
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private string GetCategoryIcon(string categoria) => categoria switch
+    {
+        "Affitto" => "🏠", "Bollette" => "💡", "Spesa Alimentare" => "🛒", "Trasporti" => "🚗",
+        "Intrattenimento" => "🎬", "Salute" => "💊", "Abbigliamento" => "👔", "Ristoranti" => "🍽️",
+        "Investimenti" => "📈", _ => "📦"
+    };
+
+    private string FormatCurrency(decimal amount) => amount.ToString("N2", new System.Globalization.CultureInfo("it-IT")) + " €";
+
+    public class ReportData
+    {
+        public decimal TotaleEntrate { get; set; }
+        public decimal TotaleUscite { get; set; }
+        public decimal Risparmio { get; set; }
+        public decimal TassoRisparmio { get; set; }
+        public decimal MediaMensileUscite { get; set; }
+        public decimal VariazioneEntrate { get; set; }
+        public decimal VariazioneUscite { get; set; }
+    }
+
+    public class AndamentoMensile
+    {
+        public string Mese { get; set; } = string.Empty;
+        public decimal Entrate { get; set; }
+        public decimal Uscite { get; set; }
+    }
+
+    public class RisparmioCumulativo
+    {
+        public string Mese { get; set; } = string.Empty;
+        public decimal Valore { get; set; }
+    }
+
+    public class AnalisiCategoria
+    {
+        public string Categoria { get; set; } = string.Empty;
+        public decimal TotaleSpeso { get; set; }
+        public decimal Percentuale { get; set; }
+        public decimal MediaMensile { get; set; }
+        public decimal Trend { get; set; }
+    }
+}

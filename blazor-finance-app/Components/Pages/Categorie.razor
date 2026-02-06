@@ -1,0 +1,409 @@
+@page "/categorie"
+@using System.ComponentModel.DataAnnotations
+
+<PageTitle>Categorie - Finance Manager</PageTitle>
+
+<div class="categorie-page">
+    <div class="page-header">
+        <div class="header-content">
+            <h1 class="page-title">
+                <span class="page-icon">🏷️</span>
+                Gestione Categorie
+            </h1>
+            <p class="page-subtitle">Crea e personalizza le categorie per organizzare le tue transazioni</p>
+        </div>
+        <button class="btn btn-primary" @onclick="ShowAddModal">
+            <span class="btn-icon">➕</span>
+            Nuova Categoria
+        </button>
+    </div>
+
+    <!-- Statistiche Categorie -->
+    <section class="stats-section">
+        <div class="stat-card">
+            <span class="stat-value">@categorie.Count</span>
+            <span class="stat-label">Categorie Totali</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-value">@categorie.Count(c => c.Tipo == TipoCategoria.Uscita)</span>
+            <span class="stat-label">Categorie Uscite</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-value">@categorie.Count(c => c.Tipo == TipoCategoria.Entrata)</span>
+            <span class="stat-label">Categorie Entrate</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-value">@categorie.Count(c => c.IsAttiva)</span>
+            <span class="stat-label">Categorie Attive</span>
+        </div>
+    </section>
+
+    <!-- Filtri -->
+    <div class="filters-bar">
+        <div class="filter-group">
+            <label>Tipo:</label>
+            <select class="filter-select" @bind="filtroTipo">
+                <option value="">Tutti</option>
+                <option value="Entrata">Entrate</option>
+                <option value="Uscita">Uscite</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label>Stato:</label>
+            <select class="filter-select" @bind="filtroStato">
+                <option value="">Tutti</option>
+                <option value="true">Attive</option>
+                <option value="false">Disattivate</option>
+            </select>
+        </div>
+        <div class="search-group">
+            <input type="text" class="search-input" placeholder="Cerca categoria..." @bind="searchText" @bind:event="oninput" />
+        </div>
+    </div>
+
+    <!-- Lista Categorie -->
+    <section class="categorie-list">
+        @if (!CategorieFiltrate.Any())
+        {
+            <div class="empty-state">
+                <span class="empty-icon">📁</span>
+                <h3>Nessuna categoria trovata</h3>
+                <p>Crea la tua prima categoria o modifica i filtri</p>
+            </div>
+        }
+        else
+        {
+            <div class="categorie-grid">
+                @foreach (var categoria in CategorieFiltrate)
+                {
+                    <div class="categoria-card @(categoria.IsAttiva ? "" : "disabled")">
+                        <div class="categoria-header">
+                            <div class="categoria-icon" style="background-color: @categoria.Colore">
+                                @categoria.Icona
+                            </div>
+                            <div class="categoria-info">
+                                <h3 class="categoria-nome">@categoria.Nome</h3>
+                                <span class="categoria-tipo @(categoria.Tipo == TipoCategoria.Entrata ? "entrata" : "uscita")">
+                                    @(categoria.Tipo == TipoCategoria.Entrata ? "📥 Entrata" : "📤 Uscita")
+                                </span>
+                            </div>
+                            <div class="categoria-status">
+                                <span class="status-dot @(categoria.IsAttiva ? "active" : "inactive")"></span>
+                            </div>
+                        </div>
+                        
+                        @if (!string.IsNullOrEmpty(categoria.Descrizione))
+                        {
+                            <p class="categoria-descrizione">@categoria.Descrizione</p>
+                        }
+                        
+                        <div class="categoria-stats">
+                            <div class="stat">
+                                <span class="stat-label">Transazioni</span>
+                                <span class="stat-value">@categoria.NumeroTransazioni</span>
+                            </div>
+                            <div class="stat">
+                                <span class="stat-label">Totale</span>
+                                <span class="stat-value">@FormatCurrency(categoria.TotaleImporto)</span>
+                            </div>
+                        </div>
+                        
+                        <div class="categoria-actions">
+                            <button class="action-btn edit" title="Modifica" @onclick="() => EditCategoria(categoria)">
+                                ✏️ Modifica
+                            </button>
+                            <button class="action-btn toggle" title="@(categoria.IsAttiva ? "Disattiva" : "Attiva")" 
+                                    @onclick="() => ToggleCategoria(categoria)">
+                                @(categoria.IsAttiva ? "🚫 Disattiva" : "✅ Attiva")
+                            </button>
+                            <button class="action-btn delete" title="Elimina" @onclick="() => DeleteCategoria(categoria)"
+                                    disabled="@(categoria.NumeroTransazioni > 0)">
+                                🗑️ Elimina
+                            </button>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </section>
+
+    <!-- Modal Aggiungi/Modifica -->
+    @if (showModal)
+    {
+        <div class="modal-overlay" @onclick="CloseModal">
+            <div class="modal-content categoria-modal" @onclick:stopPropagation>
+                <div class="modal-header">
+                    <h3>@(isEditing ? "Modifica Categoria" : "Nuova Categoria")</h3>
+                    <button class="modal-close" @onclick="CloseModal">×</button>
+                </div>
+                
+                <EditForm Model="@categoriaModel" OnValidSubmit="@SaveCategoria" class="modal-form">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary class="validation-summary" />
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Nome <span class="required">*</span></label>
+                            <InputText @bind-Value="categoriaModel.Nome" class="form-input" 
+                                       placeholder="Es: Stipendio, Affitto..." />
+                            <ValidationMessage For="@(() => categoriaModel.Nome)" class="validation-message" />
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Tipo <span class="required">*</span></label>
+                            <InputSelect @bind-Value="categoriaModel.Tipo" class="form-input form-select">
+                                <option value="@TipoCategoria.Uscita">📤 Uscita</option>
+                                <option value="@TipoCategoria.Entrata">📥 Entrata</option>
+                            </InputSelect>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Icona</label>
+                            <div class="icon-picker">
+                                @foreach (var icon in availableIcons)
+                                {
+                                    <button type="button" class="icon-option @(categoriaModel.Icona == icon ? "selected" : "")"
+                                            @onclick="() => categoriaModel.Icona = icon">
+                                        @icon
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Colore</label>
+                            <div class="color-picker">
+                                @foreach (var color in availableColors)
+                                {
+                                    <button type="button" class="color-option @(categoriaModel.Colore == color ? "selected" : "")"
+                                            style="background-color: @color"
+                                            @onclick="() => categoriaModel.Colore = color">
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Descrizione</label>
+                        <InputTextArea @bind-Value="categoriaModel.Descrizione" class="form-input form-textarea" 
+                                       rows="2" placeholder="Descrizione opzionale..." />
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <InputCheckbox @bind-Value="categoriaModel.IsAttiva" class="checkbox-input" />
+                            <span class="checkbox-text">Categoria attiva</span>
+                        </label>
+                    </div>
+                    
+                    <!-- Anteprima -->
+                    <div class="preview-section">
+                        <label class="form-label">Anteprima</label>
+                        <div class="categoria-preview">
+                            <div class="preview-icon" style="background-color: @categoriaModel.Colore">
+                                @categoriaModel.Icona
+                            </div>
+                            <span class="preview-nome">@(string.IsNullOrEmpty(categoriaModel.Nome) ? "Nome categoria" : categoriaModel.Nome)</span>
+                            <span class="preview-tipo @(categoriaModel.Tipo == TipoCategoria.Entrata ? "entrata" : "uscita")">
+                                @(categoriaModel.Tipo == TipoCategoria.Entrata ? "Entrata" : "Uscita")
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-outline" @onclick="CloseModal">Annulla</button>
+                        <button type="submit" class="btn btn-primary">
+                            @(isEditing ? "Salva Modifiche" : "Crea Categoria")
+                        </button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    }
+
+    <!-- Modal Conferma Eliminazione -->
+    @if (showDeleteConfirm)
+    {
+        <div class="modal-overlay" @onclick="() => showDeleteConfirm = false">
+            <div class="modal-content confirm-modal" @onclick:stopPropagation>
+                <div class="confirm-icon">⚠️</div>
+                <h3>Conferma Eliminazione</h3>
+                <p>Sei sicuro di voler eliminare la categoria "<strong>@categoriaToDelete?.Nome</strong>"?</p>
+                <p class="confirm-warning">Questa azione non può essere annullata.</p>
+                <div class="modal-actions">
+                    <button class="btn btn-outline" @onclick="() => showDeleteConfirm = false">Annulla</button>
+                    <button class="btn btn-danger" @onclick="ConfirmDelete">Elimina</button>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private List<Categoria> categorie = new();
+    private bool showModal = false;
+    private bool showDeleteConfirm = false;
+    private bool isEditing = false;
+    private CategoriaFormModel categoriaModel = new();
+    private Categoria? categoriaToDelete;
+    
+    // Filtri
+    private string filtroTipo = "";
+    private string filtroStato = "";
+    private string searchText = "";
+    
+    private List<string> availableIcons = new() { "🏠", "💡", "🛒", "🚗", "🎬", "💊", "👔", "🍽️", "📈", "💰", "🎁", "✈️", "📱", "🎓", "🏋️", "🐕", "🌿", "🔧" };
+    private List<string> availableColors = new() { "#FF6B6B", "#4ECDC4", "#45B7D1", "#96CEB4", "#FFEAA7", "#DDA0DD", "#98D8C8", "#F7DC6F", "#BB8FCE", "#85C1E9", "#00D4AA", "#f85149" };
+
+    private IEnumerable<Categoria> CategorieFiltrate => categorie
+        .Where(c => string.IsNullOrEmpty(filtroTipo) || c.Tipo.ToString() == filtroTipo)
+        .Where(c => string.IsNullOrEmpty(filtroStato) || c.IsAttiva.ToString().ToLower() == filtroStato.ToLower())
+        .Where(c => string.IsNullOrEmpty(searchText) || c.Nome.Contains(searchText, StringComparison.OrdinalIgnoreCase))
+        .OrderBy(c => c.Tipo)
+        .ThenBy(c => c.Nome);
+
+    protected override void OnInitialized()
+    {
+        // Mock data categorie
+        categorie = new List<Categoria>
+        {
+            new() { Id = 1, Nome = "Stipendio", Tipo = TipoCategoria.Entrata, Icona = "💰", Colore = "#00D4AA", IsAttiva = true, NumeroTransazioni = 12, TotaleImporto = 34200 },
+            new() { Id = 2, Nome = "Freelance", Tipo = TipoCategoria.Entrata, Icona = "💼", Colore = "#45B7D1", IsAttiva = true, NumeroTransazioni = 4, TotaleImporto = 1850 },
+            new() { Id = 3, Nome = "Investimenti", Tipo = TipoCategoria.Entrata, Icona = "📈", Colore = "#BB8FCE", IsAttiva = true, NumeroTransazioni = 2, TotaleImporto = 45 },
+            new() { Id = 4, Nome = "Affitto", Tipo = TipoCategoria.Uscita, Icona = "🏠", Colore = "#FF6B6B", IsAttiva = true, NumeroTransazioni = 12, TotaleImporto = 10200, Descrizione = "Affitto mensile appartamento" },
+            new() { Id = 5, Nome = "Bollette", Tipo = TipoCategoria.Uscita, Icona = "💡", Colore = "#4ECDC4", IsAttiva = true, NumeroTransazioni = 18, TotaleImporto = 1542.80m },
+            new() { Id = 6, Nome = "Spesa Alimentare", Tipo = TipoCategoria.Uscita, Icona = "🛒", Colore = "#96CEB4", IsAttiva = true, NumeroTransazioni = 24, TotaleImporto = 2890.40m },
+            new() { Id = 7, Nome = "Trasporti", Tipo = TipoCategoria.Uscita, Icona = "🚗", Colore = "#FFEAA7", IsAttiva = true, NumeroTransazioni = 8, TotaleImporto = 598 },
+            new() { Id = 8, Nome = "Intrattenimento", Tipo = TipoCategoria.Uscita, Icona = "🎬", Colore = "#F7DC6F", IsAttiva = true, NumeroTransazioni = 15, TotaleImporto = 740 },
+            new() { Id = 9, Nome = "Salute", Tipo = TipoCategoria.Uscita, Icona = "💊", Colore = "#DDA0DD", IsAttiva = true, NumeroTransazioni = 6, TotaleImporto = 285 },
+            new() { Id = 10, Nome = "Abbigliamento", Tipo = TipoCategoria.Uscita, Icona = "👔", Colore = "#98D8C8", IsAttiva = true, NumeroTransazioni = 5, TotaleImporto = 404 },
+            new() { Id = 11, Nome = "Ristoranti", Tipo = TipoCategoria.Uscita, Icona = "🍽️", Colore = "#85C1E9", IsAttiva = true, NumeroTransazioni = 12, TotaleImporto = 442.50m },
+            new() { Id = 12, Nome = "Altro", Tipo = TipoCategoria.Uscita, Icona = "📦", Colore = "#A9A9A9", IsAttiva = true, NumeroTransazioni = 8, TotaleImporto = 933 }
+        };
+    }
+
+    private void ShowAddModal()
+    {
+        categoriaModel = new CategoriaFormModel
+        {
+            Icona = "📦",
+            Colore = "#4ECDC4",
+            IsAttiva = true,
+            Tipo = TipoCategoria.Uscita
+        };
+        isEditing = false;
+        showModal = true;
+    }
+
+    private void EditCategoria(Categoria cat)
+    {
+        categoriaModel = new CategoriaFormModel
+        {
+            Id = cat.Id,
+            Nome = cat.Nome,
+            Tipo = cat.Tipo,
+            Icona = cat.Icona,
+            Colore = cat.Colore,
+            Descrizione = cat.Descrizione,
+            IsAttiva = cat.IsAttiva
+        };
+        isEditing = true;
+        showModal = true;
+    }
+
+    private void DeleteCategoria(Categoria cat)
+    {
+        if (cat.NumeroTransazioni > 0) return;
+        categoriaToDelete = cat;
+        showDeleteConfirm = true;
+    }
+
+    private void ConfirmDelete()
+    {
+        if (categoriaToDelete != null)
+        {
+            categorie.Remove(categoriaToDelete);
+        }
+        showDeleteConfirm = false;
+        categoriaToDelete = null;
+    }
+
+    private void ToggleCategoria(Categoria cat)
+    {
+        cat.IsAttiva = !cat.IsAttiva;
+    }
+
+    private void SaveCategoria()
+    {
+        if (isEditing)
+        {
+            var existing = categorie.FirstOrDefault(c => c.Id == categoriaModel.Id);
+            if (existing != null)
+            {
+                existing.Nome = categoriaModel.Nome;
+                existing.Tipo = categoriaModel.Tipo;
+                existing.Icona = categoriaModel.Icona;
+                existing.Colore = categoriaModel.Colore;
+                existing.Descrizione = categoriaModel.Descrizione;
+                existing.IsAttiva = categoriaModel.IsAttiva;
+            }
+        }
+        else
+        {
+            categorie.Add(new Categoria
+            {
+                Id = categorie.Any() ? categorie.Max(c => c.Id) + 1 : 1,
+                Nome = categoriaModel.Nome,
+                Tipo = categoriaModel.Tipo,
+                Icona = categoriaModel.Icona,
+                Colore = categoriaModel.Colore,
+                Descrizione = categoriaModel.Descrizione,
+                IsAttiva = categoriaModel.IsAttiva,
+                NumeroTransazioni = 0,
+                TotaleImporto = 0
+            });
+        }
+        CloseModal();
+    }
+
+    private void CloseModal()
+    {
+        showModal = false;
+        categoriaModel = new();
+    }
+
+    private string FormatCurrency(decimal amount) => amount.ToString("N2", new System.Globalization.CultureInfo("it-IT")) + " €";
+
+    public enum TipoCategoria { Entrata, Uscita }
+
+    public class Categoria
+    {
+        public int Id { get; set; }
+        public string Nome { get; set; } = string.Empty;
+        public TipoCategoria Tipo { get; set; }
+        public string Icona { get; set; } = "📦";
+        public string Colore { get; set; } = "#A9A9A9";
+        public string? Descrizione { get; set; }
+        public bool IsAttiva { get; set; } = true;
+        public int NumeroTransazioni { get; set; }
+        public decimal TotaleImporto { get; set; }
+    }
+
+    public class CategoriaFormModel
+    {
+        public int Id { get; set; }
+        
+        [Required(ErrorMessage = "Il nome è obbligatorio")]
+        [StringLength(50, MinimumLength = 2, ErrorMessage = "Il nome deve essere tra 2 e 50 caratteri")]
+        public string Nome { get; set; } = string.Empty;
+        
+        public TipoCategoria Tipo { get; set; } = TipoCategoria.Uscita;
+        public string Icona { get; set; } = "📦";
+        public string Colore { get; set; } = "#A9A9A9";
+        public string? Descrizione { get; set; }
+        public bool IsAttiva { get; set; } = true;
+    }
+}

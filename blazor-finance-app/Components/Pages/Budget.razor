@@ -1,0 +1,345 @@
+@page "/budget"
+@using FinanceApp.Models
+@using FinanceApp.Services
+@inject IFinanceService FinanceService
+
+<PageTitle>Budget - Finance Manager</PageTitle>
+
+<div class="budget-page">
+    <div class="page-header">
+        <div class="header-content">
+            <h1 class="page-title">
+                <span class="page-icon">🎯</span>
+                Gestione Budget
+            </h1>
+            <p class="page-subtitle">Imposta e monitora i tuoi limiti di spesa per categoria</p>
+        </div>
+        <button class="btn btn-primary" @onclick="ShowAddBudgetModal">
+            <span class="btn-icon">➕</span>
+            Nuovo Budget
+        </button>
+    </div>
+
+    <!-- Riepilogo Budget Mensile -->
+    <section class="budget-summary">
+        <div class="summary-card total-budget">
+            <div class="summary-icon">💰</div>
+            <div class="summary-content">
+                <span class="summary-label">Budget Totale Mensile</span>
+                <span class="summary-value">@FormatCurrency(budgets.Sum(b => b.ImportoMensile))</span>
+            </div>
+        </div>
+        <div class="summary-card total-spent">
+            <div class="summary-icon">📤</div>
+            <div class="summary-content">
+                <span class="summary-label">Speso Questo Mese</span>
+                <span class="summary-value">@FormatCurrency(budgets.Sum(b => b.SpesaAttuale))</span>
+            </div>
+        </div>
+        <div class="summary-card remaining">
+            <div class="summary-icon">✨</div>
+            <div class="summary-content">
+                <span class="summary-label">Rimanente</span>
+                <span class="summary-value @(GetRemainingClass())">
+                    @FormatCurrency(budgets.Sum(b => b.ImportoMensile) - budgets.Sum(b => b.SpesaAttuale))
+                </span>
+            </div>
+        </div>
+        <div class="summary-card percentage">
+            <div class="summary-icon">📊</div>
+            <div class="summary-content">
+                <span class="summary-label">Utilizzo Medio</span>
+                <span class="summary-value">@GetAveragePercentage().ToString("F0")%</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- Lista Budget per Categoria -->
+    <section class="budget-list">
+        <h2 class="section-title">Budget per Categoria</h2>
+        
+        @if (isLoading)
+        {
+            <div class="loading-container">
+                <div class="loading-spinner"></div>
+                <p>Caricamento budget...</p>
+            </div>
+        }
+        else if (!budgets.Any())
+        {
+            <div class="empty-state">
+                <span class="empty-icon">🎯</span>
+                <h3>Nessun budget configurato</h3>
+                <p>Inizia creando il tuo primo budget mensile</p>
+                <button class="btn btn-primary" @onclick="ShowAddBudgetModal">Crea Budget</button>
+            </div>
+        }
+        else
+        {
+            <div class="budget-grid">
+                @foreach (var budget in budgets)
+                {
+                    var percentage = budget.ImportoMensile > 0 
+                        ? (budget.SpesaAttuale / budget.ImportoMensile) * 100 
+                        : 0;
+                    var statusClass = percentage >= 100 ? "over" : percentage >= 80 ? "warning" : "ok";
+                    
+                    <div class="budget-card @statusClass">
+                        <div class="budget-header">
+                            <div class="budget-category">
+                                <span class="category-icon">@GetCategoryIcon(budget.Categoria)</span>
+                                <span class="category-name">@budget.Categoria</span>
+                            </div>
+                            <div class="budget-actions">
+                                <button class="action-btn" title="Modifica" @onclick="() => EditBudget(budget)">✏️</button>
+                                <button class="action-btn delete" title="Elimina" @onclick="() => DeleteBudget(budget)">🗑️</button>
+                            </div>
+                        </div>
+                        
+                        <div class="budget-amounts">
+                            <div class="amount-row">
+                                <span class="amount-label">Speso</span>
+                                <span class="amount-value spent">@FormatCurrency(budget.SpesaAttuale)</span>
+                            </div>
+                            <div class="amount-row">
+                                <span class="amount-label">Budget</span>
+                                <span class="amount-value budget">@FormatCurrency(budget.ImportoMensile)</span>
+                            </div>
+                        </div>
+                        
+                        <div class="budget-progress">
+                            <div class="progress-bar">
+                                <div class="progress-fill @statusClass" style="width: @Math.Min(percentage, 100).ToString("F0")%"></div>
+                            </div>
+                            <div class="progress-info">
+                                <span class="progress-percentage">@percentage.ToString("F0")%</span>
+                                <span class="progress-status">
+                                    @if (percentage >= 100)
+                                    {
+                                        <span class="status-badge over">Superato</span>
+                                    }
+                                    else if (percentage >= 80)
+                                    {
+                                        <span class="status-badge warning">Attenzione</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="status-badge ok">In regola</span>
+                                    }
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <div class="budget-remaining">
+                            @{
+                                var remaining = budget.ImportoMensile - budget.SpesaAttuale;
+                            }
+                            @if (remaining >= 0)
+                            {
+                                <span class="remaining-text positive">Rimangono @FormatCurrency(remaining)</span>
+                            }
+                            else
+                            {
+                                <span class="remaining-text negative">Superato di @FormatCurrency(Math.Abs(remaining))</span>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </section>
+
+    <!-- Modal Aggiungi/Modifica Budget -->
+    @if (showModal)
+    {
+        <div class="modal-overlay" @onclick="CloseModal">
+            <div class="modal-content" @onclick:stopPropagation>
+                <div class="modal-header">
+                    <h3>@(isEditing ? "Modifica Budget" : "Nuovo Budget")</h3>
+                    <button class="modal-close" @onclick="CloseModal">×</button>
+                </div>
+                <EditForm Model="@budgetModel" OnValidSubmit="@SaveBudget" class="modal-form">
+                    <DataAnnotationsValidator />
+                    
+                    <div class="form-group">
+                        <label class="form-label">Categoria <span class="required">*</span></label>
+                        <InputSelect @bind-Value="budgetModel.Categoria" class="form-input form-select" disabled="@isEditing">
+                            <option value="">-- Seleziona --</option>
+                            @foreach (var cat in categorie.Where(c => !isEditing && !budgets.Any(b => b.Categoria == c) || isEditing))
+                            {
+                                <option value="@cat">@cat</option>
+                            }
+                        </InputSelect>
+                        <ValidationMessage For="@(() => budgetModel.Categoria)" class="validation-message" />
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Budget Mensile (€) <span class="required">*</span></label>
+                        <InputNumber @bind-Value="budgetModel.ImportoMensile" class="form-input" step="10" min="0" />
+                        <ValidationMessage For="@(() => budgetModel.ImportoMensile)" class="validation-message" />
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Note</label>
+                        <InputTextArea @bind-Value="budgetModel.Note" class="form-input form-textarea" rows="2" 
+                                       placeholder="Aggiungi note opzionali..." />
+                    </div>
+                    
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-outline" @onclick="CloseModal">Annulla</button>
+                        <button type="submit" class="btn btn-primary">
+                            @(isEditing ? "Salva Modifiche" : "Crea Budget")
+                        </button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private bool isLoading = true;
+    private bool showModal = false;
+    private bool isEditing = false;
+    private List<BudgetItem> budgets = new();
+    private List<string> categorie = new();
+    private BudgetFormModel budgetModel = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDataAsync();
+    }
+
+    private async Task LoadDataAsync()
+    {
+        isLoading = true;
+        try
+        {
+            categorie = await FinanceService.GetCategorieAsync();
+            
+            // Mock data per i budget
+            budgets = new List<BudgetItem>
+            {
+                new() { Id = 1, Categoria = "Affitto", ImportoMensile = 900, SpesaAttuale = 850 },
+                new() { Id = 2, Categoria = "Spesa Alimentare", ImportoMensile = 400, SpesaAttuale = 298.50m },
+                new() { Id = 3, Categoria = "Bollette", ImportoMensile = 200, SpesaAttuale = 165.80m },
+                new() { Id = 4, Categoria = "Trasporti", ImportoMensile = 100, SpesaAttuale = 39 },
+                new() { Id = 5, Categoria = "Intrattenimento", ImportoMensile = 150, SpesaAttuale = 195 },
+                new() { Id = 6, Categoria = "Ristoranti", ImportoMensile = 200, SpesaAttuale = 150 },
+                new() { Id = 7, Categoria = "Abbigliamento", ImportoMensile = 150, SpesaAttuale = 0 },
+                new() { Id = 8, Categoria = "Salute", ImportoMensile = 100, SpesaAttuale = 45 }
+            };
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void ShowAddBudgetModal()
+    {
+        budgetModel = new BudgetFormModel();
+        isEditing = false;
+        showModal = true;
+    }
+
+    private void EditBudget(BudgetItem budget)
+    {
+        budgetModel = new BudgetFormModel
+        {
+            Id = budget.Id,
+            Categoria = budget.Categoria,
+            ImportoMensile = budget.ImportoMensile,
+            Note = budget.Note
+        };
+        isEditing = true;
+        showModal = true;
+    }
+
+    private void DeleteBudget(BudgetItem budget)
+    {
+        budgets.Remove(budget);
+    }
+
+    private void SaveBudget()
+    {
+        if (isEditing)
+        {
+            var existing = budgets.FirstOrDefault(b => b.Id == budgetModel.Id);
+            if (existing != null)
+            {
+                existing.ImportoMensile = budgetModel.ImportoMensile;
+                existing.Note = budgetModel.Note;
+            }
+        }
+        else
+        {
+            budgets.Add(new BudgetItem
+            {
+                Id = budgets.Any() ? budgets.Max(b => b.Id) + 1 : 1,
+                Categoria = budgetModel.Categoria,
+                ImportoMensile = budgetModel.ImportoMensile,
+                SpesaAttuale = 0,
+                Note = budgetModel.Note
+            });
+        }
+        CloseModal();
+    }
+
+    private void CloseModal()
+    {
+        showModal = false;
+        budgetModel = new();
+    }
+
+    private string GetRemainingClass()
+    {
+        var remaining = budgets.Sum(b => b.ImportoMensile) - budgets.Sum(b => b.SpesaAttuale);
+        return remaining >= 0 ? "positive" : "negative";
+    }
+
+    private double GetAveragePercentage()
+    {
+        if (!budgets.Any()) return 0;
+        return budgets.Average(b => b.ImportoMensile > 0 ? (double)(b.SpesaAttuale / b.ImportoMensile) * 100 : 0);
+    }
+
+    private string GetCategoryIcon(string categoria) => categoria switch
+    {
+        "Affitto" => "🏠",
+        "Bollette" => "💡",
+        "Spesa Alimentare" => "🛒",
+        "Trasporti" => "🚗",
+        "Intrattenimento" => "🎬",
+        "Salute" => "💊",
+        "Abbigliamento" => "👔",
+        "Ristoranti" => "🍽️",
+        "Investimenti" => "📈",
+        _ => "📦"
+    };
+
+    private string FormatCurrency(decimal amount) => amount.ToString("N2", new System.Globalization.CultureInfo("it-IT")) + " €";
+
+    public class BudgetItem
+    {
+        public int Id { get; set; }
+        public string Categoria { get; set; } = string.Empty;
+        public decimal ImportoMensile { get; set; }
+        public decimal SpesaAttuale { get; set; }
+        public string? Note { get; set; }
+    }
+
+    public class BudgetFormModel
+    {
+        public int Id { get; set; }
+        
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Seleziona una categoria")]
+        public string Categoria { get; set; } = string.Empty;
+        
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Inserisci l'importo")]
+        [System.ComponentModel.DataAnnotations.Range(1, 100000, ErrorMessage = "L'importo deve essere maggiore di 0")]
+        public decimal ImportoMensile { get; set; }
+        
+        public string? Note { get; set; }
+    }
+}

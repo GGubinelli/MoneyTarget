@@ -1,0 +1,439 @@
+@page "/impostazioni"
+
+<PageTitle>Impostazioni - Finance Manager</PageTitle>
+
+<div class="settings-page">
+    <div class="page-header">
+        <h1 class="page-title">
+            <span class="page-icon">⚙️</span>
+            Impostazioni
+        </h1>
+        <p class="page-subtitle">Personalizza l'applicazione secondo le tue preferenze</p>
+    </div>
+
+    <div class="settings-container">
+        <!-- Profilo Utente -->
+        <section class="settings-section">
+            <div class="section-header">
+                <h2 class="section-title">
+                    <span class="section-icon">👤</span>
+                    Profilo Utente
+                </h2>
+            </div>
+            <div class="settings-card">
+                <div class="profile-header">
+                    <div class="avatar-container">
+                        <div class="avatar">@userSettings.Nome.Substring(0, 1).ToUpper()</div>
+                        <button class="avatar-edit-btn">📷</button>
+                    </div>
+                    <div class="profile-info">
+                        <h3>@userSettings.Nome @userSettings.Cognome</h3>
+                        <p>@userSettings.Email</p>
+                        <span class="member-since">Membro dal @userSettings.DataRegistrazione.ToString("MMMM yyyy")</span>
+                    </div>
+                </div>
+                
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">Nome</label>
+                        <input type="text" class="form-input" @bind="userSettings.Nome" />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Cognome</label>
+                        <input type="text" class="form-input" @bind="userSettings.Cognome" />
+                    </div>
+                    <div class="form-group full-width">
+                        <label class="form-label">Email</label>
+                        <input type="email" class="form-input" @bind="userSettings.Email" />
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Preferenze Generali -->
+        <section class="settings-section">
+            <div class="section-header">
+                <h2 class="section-title">
+                    <span class="section-icon">🎨</span>
+                    Preferenze Generali
+                </h2>
+            </div>
+            <div class="settings-card">
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h4>Tema</h4>
+                        <p>Scegli il tema dell'interfaccia</p>
+                    </div>
+                    <div class="setting-control">
+                        <div class="theme-selector">
+                            <button class="theme-btn @(userSettings.Tema == "dark" ? "active" : "")" 
+                                    @onclick="() => userSettings.Tema = \"dark\"">
+                                <span class="theme-icon">🌙</span>
+                                <span>Scuro</span>
+                            </button>
+                            <button class="theme-btn @(userSettings.Tema == "light" ? "active" : "")" 
+                                    @onclick="() => userSettings.Tema = \"light\"">
+                                <span class="theme-icon">☀️</span>
+                                <span>Chiaro</span>
+                            </button>
+                            <button class="theme-btn @(userSettings.Tema == "auto" ? "active" : "")" 
+                                    @onclick="() => userSettings.Tema = \"auto\"">
+                                <span class="theme-icon">🔄</span>
+                                <span>Auto</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h4>Lingua</h4>
+                        <p>Lingua dell'interfaccia</p>
+                    </div>
+                    <div class="setting-control">
+                        <select class="form-input form-select" @bind="userSettings.Lingua">
+                            <option value="it">🇮🇹 Italiano</option>
+                            <option value="en">🇬🇧 English</option>
+                            <option value="es">🇪🇸 Español</option>
+                            <option value="de">🇩🇪 Deutsch</option>
+                            <option value="fr">🇫🇷 Français</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h4>Valuta</h4>
+                        <p>Valuta predefinita per le transazioni</p>
+                    </div>
+                    <div class="setting-control">
+                        <select class="form-input form-select" @bind="userSettings.Valuta">
+                            <option value="EUR">€ Euro (EUR)</option>
+                            <option value="USD">$ Dollaro USA (USD)</option>
+                            <option value="GBP">£ Sterlina (GBP)</option>
+                            <option value="CHF">Fr. Franco Svizzero (CHF)</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h4>Formato Data</h4>
+                        <p>Come visualizzare le date</p>
+                    </div>
+                    <div class="setting-control">
+                        <select class="form-input form-select" @bind="userSettings.FormatoData">
+                            <option value="dd/MM/yyyy">DD/MM/YYYY (31/12/2024)</option>
+                            <option value="MM/dd/yyyy">MM/DD/YYYY (12/31/2024)</option>
+                            <option value="yyyy-MM-dd">YYYY-MM-DD (2024-12-31)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Notifiche -->
+        <section class="settings-section">
+            <div class="section-header">
+                <h2 class="section-title">
+                    <span class="section-icon">🔔</span>
+                    Notifiche
+                </h2>
+            </div>
+            <div class="settings-card">
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h4>Avvisi Budget</h4>
+                        <p>Ricevi notifiche quando superi il budget di una categoria</p>
+                    </div>
+                    <div class="setting-control">
+                        <label class="toggle-switch">
+                            <input type="checkbox" @bind="userSettings.NotificheBudget" />
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h4>Soglia Avviso Budget</h4>
+                        <p>Percentuale di utilizzo per ricevere l'avviso</p>
+                    </div>
+                    <div class="setting-control">
+                        <div class="range-control">
+                            <input type="range" min="50" max="100" step="5" @bind="userSettings.SogliaBudget" />
+                            <span class="range-value">@userSettings.SogliaBudget%</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h4>Report Settimanale</h4>
+                        <p>Ricevi un riepilogo settimanale via email</p>
+                    </div>
+                    <div class="setting-control">
+                        <label class="toggle-switch">
+                            <input type="checkbox" @bind="userSettings.ReportSettimanale" />
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h4>Report Mensile</h4>
+                        <p>Ricevi un report dettagliato a fine mese</p>
+                    </div>
+                    <div class="setting-control">
+                        <label class="toggle-switch">
+                            <input type="checkbox" @bind="userSettings.ReportMensile" />
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h4>Notifiche Push</h4>
+                        <p>Abilita le notifiche push nel browser</p>
+                    </div>
+                    <div class="setting-control">
+                        <label class="toggle-switch">
+                            <input type="checkbox" @bind="userSettings.NotifichePush" />
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Sicurezza -->
+        <section class="settings-section">
+            <div class="section-header">
+                <h2 class="section-title">
+                    <span class="section-icon">🔒</span>
+                    Sicurezza
+                </h2>
+            </div>
+            <div class="settings-card">
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h4>Cambia Password</h4>
+                        <p>Aggiorna la password del tuo account</p>
+                    </div>
+                    <div class="setting-control">
+                        <button class="btn btn-outline" @onclick="ShowChangePasswordModal">
+                            Modifica
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h4>Autenticazione a Due Fattori</h4>
+                        <p>Aggiungi un ulteriore livello di sicurezza</p>
+                    </div>
+                    <div class="setting-control">
+                        <label class="toggle-switch">
+                            <input type="checkbox" @bind="userSettings.TwoFactorEnabled" />
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h4>Sessioni Attive</h4>
+                        <p>Gestisci i dispositivi connessi</p>
+                    </div>
+                    <div class="setting-control">
+                        <button class="btn btn-outline">
+                            Visualizza (@userSettings.SessioniAttive)
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Dati e Privacy -->
+        <section class="settings-section">
+            <div class="section-header">
+                <h2 class="section-title">
+                    <span class="section-icon">📊</span>
+                    Dati e Privacy
+                </h2>
+            </div>
+            <div class="settings-card">
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h4>Esporta Dati</h4>
+                        <p>Scarica tutti i tuoi dati in formato CSV o JSON</p>
+                    </div>
+                    <div class="setting-control">
+                        <div class="button-group">
+                            <button class="btn btn-outline btn-sm">CSV</button>
+                            <button class="btn btn-outline btn-sm">JSON</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h4>Importa Dati</h4>
+                        <p>Importa transazioni da file CSV o da altre app</p>
+                    </div>
+                    <div class="setting-control">
+                        <button class="btn btn-outline">
+                            <span>📤</span> Importa
+                        </button>
+                    </div>
+                </div>
+
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h4>Backup Automatico</h4>
+                        <p>Esegui backup automatici dei tuoi dati</p>
+                    </div>
+                    <div class="setting-control">
+                        <label class="toggle-switch">
+                            <input type="checkbox" @bind="userSettings.BackupAutomatico" />
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Zona Pericolo -->
+        <section class="settings-section danger-zone">
+            <div class="section-header">
+                <h2 class="section-title">
+                    <span class="section-icon">⚠️</span>
+                    Zona Pericolo
+                </h2>
+            </div>
+            <div class="settings-card danger">
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h4>Elimina Tutti i Dati</h4>
+                        <p>Cancella tutte le transazioni e i budget (irreversibile)</p>
+                    </div>
+                    <div class="setting-control">
+                        <button class="btn btn-danger-outline">
+                            Cancella Dati
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="setting-item">
+                    <div class="setting-info">
+                        <h4>Elimina Account</h4>
+                        <p>Elimina permanentemente il tuo account e tutti i dati associati</p>
+                    </div>
+                    <div class="setting-control">
+                        <button class="btn btn-danger">
+                            Elimina Account
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Azioni -->
+        <div class="settings-actions">
+            <button class="btn btn-outline" @onclick="ResetSettings">
+                <span>🔄</span> Ripristina Predefiniti
+            </button>
+            <button class="btn btn-primary" @onclick="SaveSettings">
+                <span>💾</span> Salva Impostazioni
+            </button>
+        </div>
+    </div>
+
+    <!-- Toast Salvataggio -->
+    @if (showSaveToast)
+    {
+        <div class="success-toast">
+            <span class="toast-icon">✓</span>
+            <span class="toast-message">Impostazioni salvate con successo!</span>
+        </div>
+    }
+</div>
+
+@code {
+    private UserSettings userSettings = new();
+    private bool showSaveToast = false;
+
+    protected override void OnInitialized()
+    {
+        // Carica impostazioni mock
+        userSettings = new UserSettings
+        {
+            Nome = "Marco",
+            Cognome = "Rossi",
+            Email = "marco.rossi@email.com",
+            DataRegistrazione = new DateTime(2024, 1, 15),
+            Tema = "dark",
+            Lingua = "it",
+            Valuta = "EUR",
+            FormatoData = "dd/MM/yyyy",
+            NotificheBudget = true,
+            SogliaBudget = 80,
+            ReportSettimanale = false,
+            ReportMensile = true,
+            NotifichePush = true,
+            TwoFactorEnabled = false,
+            SessioniAttive = 2,
+            BackupAutomatico = true
+        };
+    }
+
+    private void ShowChangePasswordModal()
+    {
+        // Implementazione cambio password
+    }
+
+    private async Task SaveSettings()
+    {
+        // Salva impostazioni
+        showSaveToast = true;
+        StateHasChanged();
+        
+        await Task.Delay(3000);
+        showSaveToast = false;
+        StateHasChanged();
+    }
+
+    private void ResetSettings()
+    {
+        userSettings.Tema = "dark";
+        userSettings.Lingua = "it";
+        userSettings.Valuta = "EUR";
+        userSettings.FormatoData = "dd/MM/yyyy";
+        userSettings.NotificheBudget = true;
+        userSettings.SogliaBudget = 80;
+        userSettings.ReportSettimanale = false;
+        userSettings.ReportMensile = true;
+    }
+
+    public class UserSettings
+    {
+        public string Nome { get; set; } = string.Empty;
+        public string Cognome { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public DateTime DataRegistrazione { get; set; }
+        public string Tema { get; set; } = "dark";
+        public string Lingua { get; set; } = "it";
+        public string Valuta { get; set; } = "EUR";
+        public string FormatoData { get; set; } = "dd/MM/yyyy";
+        public bool NotificheBudget { get; set; }
+        public int SogliaBudget { get; set; } = 80;
+        public bool ReportSettimanale { get; set; }
+        public bool ReportMensile { get; set; }
+        public bool NotifichePush { get; set; }
+        public bool TwoFactorEnabled { get; set; }
+        public int SessioniAttive { get; set; }
+        public bool BackupAutomatico { get; set; }
+    }
+}
