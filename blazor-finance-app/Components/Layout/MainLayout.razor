@@ -1,0 +1,34 @@
+@inherits LayoutComponentBase
+
+<div class="app-container">
+    <NavMenu />
+    
+    <main class="main-content">
+        <div class="top-bar">
+            <button class="menu-toggle" @onclick="ToggleMenu">
+                <span class="hamburger-icon"></span>
+            </button>
+            <div class="top-bar-title">
+                <h1>Finance Manager</h1>
+                <span class="subtitle">Gestione Finanze Personali</span>
+            </div>
+            <div class="top-bar-actions">
+                <span class="current-date">@DateTime.Now.ToString("dd MMMM yyyy")</span>
+            </div>
+        </div>
+        
+        <div class="page-content">
+            @Body
+        </div>
+    </main>
+</div>
+
+@code {
+    private bool isMenuOpen = false;
+
+    private void ToggleMenu()
+    {
+        isMenuOpen = !isMenuOpen;
+        // In una vera app, questo stato verrebbe condiviso con NavMenu
+    }
+}

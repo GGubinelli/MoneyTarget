@@ -1,0 +1,256 @@
+@page "/transazioni"
+@using FinanceApp.Models
+@using FinanceApp.Services
+@inject IFinanceService FinanceService
+
+<PageTitle>Transazioni - Finance Manager</PageTitle>
+
+<div class="transactions-page">
+    <div class="page-header">
+        <div class="header-content">
+            <h1 class="page-title">
+                <span class="page-icon">💳</span>
+                Tutte le Transazioni
+            </h1>
+            <p class="page-subtitle">Visualizza e gestisci tutte le tue transazioni</p>
+        </div>
+        <a href="/nuova-transazione" class="btn btn-primary">
+            <span class="btn-icon">➕</span>
+            Nuova Transazione
+        </a>
+    </div>
+
+    <!-- Filtri -->
+    <div class="filters-section">
+        <div class="filter-group">
+            <label class="filter-label">Tipo</label>
+            <select class="filter-select" @bind="filtroTipo">
+                <option value="">Tutti</option>
+                <option value="Entrata">Entrate</option>
+                <option value="Uscita">Uscite</option>
+            </select>
+        </div>
+        
+        <div class="filter-group">
+            <label class="filter-label">Categoria</label>
+            <select class="filter-select" @bind="filtroCategoria">
+                <option value="">Tutte</option>
+                @foreach (var cat in categorie)
+                {
+                    <option value="@cat">@cat</option>
+                }
+            </select>
+        </div>
+
+        <div class="filter-group">
+            <label class="filter-label">Cerca</label>
+            <input type="text" class="filter-input" placeholder="Cerca descrizione..." @bind="searchText" @bind:event="oninput" />
+        </div>
+
+        <button class="btn btn-outline filter-btn" @onclick="ApplicaFiltri">
+            <span>🔍</span> Filtra
+        </button>
+        <button class="btn btn-ghost filter-btn" @onclick="ResetFiltri">
+            <span>✕</span> Reset
+        </button>
+    </div>
+
+    <!-- Statistiche veloci -->
+    <div class="quick-stats">
+        <div class="stat-item">
+            <span class="stat-label">Totale Visualizzate</span>
+            <span class="stat-value">@transazioniFiltrate.Count</span>
+        </div>
+        <div class="stat-item entrate">
+            <span class="stat-label">Entrate</span>
+            <span class="stat-value">+@FormatCurrency(transazioniFiltrate.Where(t => t.Tipo == TipoTransazione.Entrata).Sum(t => t.Importo))</span>
+        </div>
+        <div class="stat-item uscite">
+            <span class="stat-label">Uscite</span>
+            <span class="stat-value">-@FormatCurrency(transazioniFiltrate.Where(t => t.Tipo == TipoTransazione.Uscita).Sum(t => t.Importo))</span>
+        </div>
+    </div>
+
+    <!-- Tabella Transazioni -->
+    <div class="transactions-table-wrapper">
+        @if (isLoading)
+        {
+            <div class="loading-container">
+                <div class="loading-spinner"></div>
+                <p>Caricamento transazioni...</p>
+            </div>
+        }
+        else if (!transazioniFiltrate.Any())
+        {
+            <div class="empty-state">
+                <span class="empty-icon">📭</span>
+                <h3>Nessuna transazione trovata</h3>
+                <p>Non ci sono transazioni che corrispondono ai filtri selezionati</p>
+            </div>
+        }
+        else
+        {
+            <table class="transactions-table full">
+                <thead>
+                    <tr>
+                        <th class="sortable" @onclick="() => OrdinaPerColonna(nameof(Transaction.Data))">
+                            Data
+                            @if (colonnaOrdinamento == nameof(Transaction.Data))
+                            {
+                                <span class="sort-icon">@(ordinamentoAscendente ? "▲" : "▼")</span>
+                            }
+                        </th>
+                        <th>Descrizione</th>
+                        <th>Categoria</th>
+                        <th>Tipo</th>
+                        <th class="text-right sortable" @onclick="() => OrdinaPerColonna(nameof(Transaction.Importo))">
+                            Importo
+                            @if (colonnaOrdinamento == nameof(Transaction.Importo))
+                            {
+                                <span class="sort-icon">@(ordinamentoAscendente ? "▲" : "▼")</span>
+                            }
+                        </th>
+                        <th class="text-center">Azioni</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var transazione in transazioniFiltrate)
+                    {
+                        <tr class="@(transazione.Tipo == TipoTransazione.Entrata ? "row-entrata" : "row-uscita")">
+                            <td class="date-cell">
+                                <div class="date-badge">
+                                    <span class="date-day">@transazione.Data.ToString("dd")</span>
+                                    <span class="date-month">@transazione.Data.ToString("MMM yyyy")</span>
+                                </div>
+                            </td>
+                            <td class="description-cell">
+                                <span class="description-text">@transazione.Descrizione</span>
+                            </td>
+                            <td>
+                                <span class="category-badge">@transazione.Categoria</span>
+                            </td>
+                            <td>
+                                <span class="tipo-badge @(transazione.Tipo == TipoTransazione.Entrata ? "entrata" : "uscita")">
+                                    @(transazione.Tipo == TipoTransazione.Entrata ? "📥 Entrata" : "📤 Uscita")
+                                </span>
+                            </td>
+                            <td class="amount-cell @(transazione.Tipo == TipoTransazione.Entrata ? "income" : "expense")">
+                                @(transazione.Tipo == TipoTransazione.Entrata ? "+" : "-")@FormatCurrency(transazione.Importo)
+                            </td>
+                            <td class="actions-cell">
+                                <button class="action-btn edit" title="Modifica">✏️</button>
+                                <button class="action-btn delete" title="Elimina">🗑️</button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+
+    <!-- Paginazione (placeholder) -->
+    <div class="pagination">
+        <button class="pagination-btn" disabled>← Precedente</button>
+        <span class="pagination-info">Pagina 1 di 1</span>
+        <button class="pagination-btn" disabled>Successiva →</button>
+    </div>
+</div>
+
+@code {
+    private bool isLoading = true;
+    private List<Transaction> tutteLeTransazioni = new();
+    private List<Transaction> transazioniFiltrate = new();
+    private List<string> categorie = new();
+    
+    // Filtri
+    private string filtroTipo = "";
+    private string filtroCategoria = "";
+    private string searchText = "";
+    
+    // Ordinamento
+    private string colonnaOrdinamento = nameof(Transaction.Data);
+    private bool ordinamentoAscendente = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDataAsync();
+    }
+
+    private async Task LoadDataAsync()
+    {
+        isLoading = true;
+        try
+        {
+            tutteLeTransazioni = await FinanceService.GetTransazioniRecentiAsync(100);
+            categorie = await FinanceService.GetCategorieAsync();
+            ApplicaFiltri();
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void ApplicaFiltri()
+    {
+        transazioniFiltrate = tutteLeTransazioni.AsEnumerable();
+
+        if (!string.IsNullOrEmpty(filtroTipo))
+        {
+            var tipo = filtroTipo == "Entrata" ? TipoTransazione.Entrata : TipoTransazione.Uscita;
+            transazioniFiltrate = transazioniFiltrate.Where(t => t.Tipo == tipo);
+        }
+
+        if (!string.IsNullOrEmpty(filtroCategoria))
+        {
+            transazioniFiltrate = transazioniFiltrate.Where(t => t.Categoria == filtroCategoria);
+        }
+
+        if (!string.IsNullOrEmpty(searchText))
+        {
+            transazioniFiltrate = transazioniFiltrate.Where(t => 
+                t.Descrizione.Contains(searchText, StringComparison.OrdinalIgnoreCase));
+        }
+
+        // Applica ordinamento
+        transazioniFiltrate = colonnaOrdinamento switch
+        {
+            nameof(Transaction.Data) => ordinamentoAscendente 
+                ? transazioniFiltrate.OrderBy(t => t.Data) 
+                : transazioniFiltrate.OrderByDescending(t => t.Data),
+            nameof(Transaction.Importo) => ordinamentoAscendente 
+                ? transazioniFiltrate.OrderBy(t => t.Importo) 
+                : transazioniFiltrate.OrderByDescending(t => t.Importo),
+            _ => transazioniFiltrate.OrderByDescending(t => t.Data)
+        };
+
+        transazioniFiltrate = transazioniFiltrate.ToList();
+    }
+
+    private void ResetFiltri()
+    {
+        filtroTipo = "";
+        filtroCategoria = "";
+        searchText = "";
+        ApplicaFiltri();
+    }
+
+    private void OrdinaPerColonna(string colonna)
+    {
+        if (colonnaOrdinamento == colonna)
+        {
+            ordinamentoAscendente = !ordinamentoAscendente;
+        }
+        else
+        {
+            colonnaOrdinamento = colonna;
+            ordinamentoAscendente = false;
+        }
+        ApplicaFiltri();
+    }
+
+    private string FormatCurrency(decimal amount)
+    {
+        return amount.ToString("N2", new System.Globalization.CultureInfo("it-IT")) + " €";
+    }
+}

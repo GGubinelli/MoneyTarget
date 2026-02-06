@@ -1,0 +1,311 @@
+@page "/"
+@using FinanceApp.Models
+@using FinanceApp.Services
+@inject IFinanceService FinanceService
+
+<PageTitle>Dashboard - Finance Manager</PageTitle>
+
+<div class="dashboard">
+    @if (isLoading)
+    {
+        <div class="loading-container">
+            <div class="loading-spinner"></div>
+            <p>Caricamento dati...</p>
+        </div>
+    }
+    else
+    {
+        <!-- KPI Cards -->
+        <section class="kpi-section">
+            <h2 class="section-title">Riepilogo Finanziario</h2>
+            <div class="kpi-grid">
+                <div class="kpi-card patrimonio">
+                    <div class="kpi-header">
+                        <span class="kpi-icon">💰</span>
+                        <span class="kpi-label">Totale Patrimonio</span>
+                    </div>
+                    <div class="kpi-value">@FormatCurrency(kpi?.TotalePatrimonio ?? 0)</div>
+                    <div class="kpi-change positive">
+                        <span class="change-icon">▲</span>
+                        <span>@kpi?.VariazionePatrimonio.ToString("F1")% vs mese precedente</span>
+                    </div>
+                </div>
+
+                <div class="kpi-card entrate">
+                    <div class="kpi-header">
+                        <span class="kpi-icon">📥</span>
+                        <span class="kpi-label">Entrate Mese</span>
+                    </div>
+                    <div class="kpi-value">@FormatCurrency(kpi?.EntrateMese ?? 0)</div>
+                    <div class="kpi-change @(kpi?.VariazioneEntrate >= 0 ? "positive" : "negative")">
+                        <span class="change-icon">@(kpi?.VariazioneEntrate >= 0 ? "▲" : "▼")</span>
+                        <span>@Math.Abs(kpi?.VariazioneEntrate ?? 0).ToString("F1")% vs mese precedente</span>
+                    </div>
+                </div>
+
+                <div class="kpi-card uscite">
+                    <div class="kpi-header">
+                        <span class="kpi-icon">📤</span>
+                        <span class="kpi-label">Uscite Mese</span>
+                    </div>
+                    <div class="kpi-value">@FormatCurrency(kpi?.UsciteMese ?? 0)</div>
+                    <div class="kpi-change @(kpi?.VariazioneUscite <= 0 ? "positive" : "negative")">
+                        <span class="change-icon">@(kpi?.VariazioneUscite <= 0 ? "▼" : "▲")</span>
+                        <span>@Math.Abs(kpi?.VariazioneUscite ?? 0).ToString("F1")% vs mese precedente</span>
+                    </div>
+                </div>
+
+                <div class="kpi-card risparmio @(kpi?.RisparmioNetto >= 0 ? "positive-bg" : "negative-bg")">
+                    <div class="kpi-header">
+                        <span class="kpi-icon">🎯</span>
+                        <span class="kpi-label">Risparmio Netto</span>
+                    </div>
+                    <div class="kpi-value">@FormatCurrency(kpi?.RisparmioNetto ?? 0)</div>
+                    <div class="kpi-change @(kpi?.RisparmioNetto >= 0 ? "positive" : "negative")">
+                        <span>@(kpi?.RisparmioNetto >= 0 ? "In attivo questo mese" : "In passivo questo mese")</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Grafici -->
+        <section class="charts-section">
+            <div class="charts-grid">
+                <!-- Grafico a Torta - Spese per Categoria -->
+                <div class="chart-card">
+                    <h3 class="chart-title">
+                        <span class="chart-icon">🥧</span>
+                        Ripartizione Spese per Categoria
+                    </h3>
+                    <div class="pie-chart-container">
+                        <div class="pie-chart">
+                            <svg viewBox="0 0 100 100" class="pie-svg">
+                                @{
+                                    double cumulativePercent = 0;
+                                }
+                                @foreach (var spesa in speseCategoria)
+                                {
+                                    var startAngle = cumulativePercent * 3.6;
+                                    var endAngle = (cumulativePercent + spesa.Percentuale) * 3.6;
+                                    var largeArcFlag = spesa.Percentuale > 50 ? 1 : 0;
+                                    
+                                    var startX = 50 + 40 * Math.Cos((startAngle - 90) * Math.PI / 180);
+                                    var startY = 50 + 40 * Math.Sin((startAngle - 90) * Math.PI / 180);
+                                    var endX = 50 + 40 * Math.Cos((endAngle - 90) * Math.PI / 180);
+                                    var endY = 50 + 40 * Math.Sin((endAngle - 90) * Math.PI / 180);
+
+                                    <path d="M 50 50 L @startX.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) @startY.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) A 40 40 0 @largeArcFlag 1 @endX.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) @endY.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) Z"
+                                          fill="@spesa.Colore"
+                                          class="pie-slice"
+                                          data-category="@spesa.Categoria"
+                                          data-amount="@spesa.Importo"
+                                          data-percent="@spesa.Percentuale.ToString("F1")">
+                                        <title>@spesa.Categoria: @FormatCurrency(spesa.Importo) (@spesa.Percentuale.ToString("F1")%)</title>
+                                    </path>
+                                    
+                                    cumulativePercent += spesa.Percentuale;
+                                }
+                            </svg>
+                        </div>
+                        <div class="pie-legend">
+                            @foreach (var spesa in speseCategoria.Take(8))
+                            {
+                                <div class="legend-item">
+                                    <span class="legend-color" style="background-color: @spesa.Colore"></span>
+                                    <span class="legend-label">@spesa.Categoria</span>
+                                    <span class="legend-value">@spesa.Percentuale.ToString("F1")%</span>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Grafico a Linee - Andamento Saldo -->
+                <div class="chart-card">
+                    <h3 class="chart-title">
+                        <span class="chart-icon">📈</span>
+                        Andamento Saldo Ultimi 12 Mesi
+                    </h3>
+                    <div class="line-chart-container">
+                        <svg viewBox="0 0 400 200" class="line-chart-svg">
+                            <!-- Griglia -->
+                            <defs>
+                                <linearGradient id="lineGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                                    <stop offset="0%" style="stop-color:#00D4AA;stop-opacity:0.3" />
+                                    <stop offset="100%" style="stop-color:#00D4AA;stop-opacity:0" />
+                                </linearGradient>
+                            </defs>
+                            
+                            <!-- Linee griglia orizzontali -->
+                            @for (int i = 0; i <= 4; i++)
+                            {
+                                var y = 20 + (i * 40);
+                                <line x1="40" y1="@y" x2="380" y2="@y" stroke="#2a3441" stroke-width="1" />
+                            }
+                            
+                            <!-- Etichette asse Y -->
+                            @if (andamentoSaldo.Any())
+                            {
+                                var maxSaldo = andamentoSaldo.Max(s => s.Saldo);
+                                var minSaldo = andamentoSaldo.Min(s => s.Saldo);
+                                var range = maxSaldo - minSaldo;
+                                
+                                @for (int i = 0; i <= 4; i++)
+                                {
+                                    var y = 20 + (i * 40);
+                                    var value = maxSaldo - (range * i / 4);
+                                    <text x="35" y="@(y + 4)" fill="#8a9bae" font-size="8" text-anchor="end">
+                                        @((value / 1000).ToString("F0"))k
+                                    </text>
+                                }
+                            }
+                            
+                            <!-- Area sotto la linea -->
+                            @if (andamentoSaldo.Any())
+                            {
+                                var maxSaldo = andamentoSaldo.Max(s => s.Saldo);
+                                var minSaldo = andamentoSaldo.Min(s => s.Saldo);
+                                var range = maxSaldo - minSaldo;
+                                if (range == 0) range = 1;
+                                
+                                var points = new List<string>();
+                                var xStep = 340.0 / (andamentoSaldo.Count - 1);
+                                
+                                for (int i = 0; i < andamentoSaldo.Count; i++)
+                                {
+                                    var x = 40 + (i * xStep);
+                                    var y = 180 - ((double)(andamentoSaldo[i].Saldo - minSaldo) / (double)range * 160);
+                                    points.Add($"{x.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)},{y.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)}");
+                                }
+                                
+                                var areaPath = $"M 40,180 L {string.Join(" L ", points)} L 380,180 Z";
+                                <path d="@areaPath" fill="url(#lineGradient)" />
+                                
+                                <!-- Linea principale -->
+                                <polyline points="@string.Join(" ", points)" 
+                                          fill="none" 
+                                          stroke="#00D4AA" 
+                                          stroke-width="2.5"
+                                          stroke-linecap="round"
+                                          stroke-linejoin="round" />
+                                
+                                <!-- Punti dati -->
+                                @for (int i = 0; i < andamentoSaldo.Count; i++)
+                                {
+                                    var x = 40 + (i * xStep);
+                                    var y = 180 - ((double)(andamentoSaldo[i].Saldo - minSaldo) / (double)range * 160);
+                                    <circle cx="@x.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)" 
+                                            cy="@y.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)" 
+                                            r="4" 
+                                            fill="#0d1117" 
+                                            stroke="#00D4AA" 
+                                            stroke-width="2">
+                                        <title>@andamentoSaldo[i].Mese: @FormatCurrency(andamentoSaldo[i].Saldo)</title>
+                                    </circle>
+                                }
+                                
+                                <!-- Etichette asse X -->
+                                @for (int i = 0; i < andamentoSaldo.Count; i++)
+                                {
+                                    var x = 40 + (i * xStep);
+                                    <text x="@x.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)" 
+                                          y="195" 
+                                          fill="#8a9bae" 
+                                          font-size="8" 
+                                          text-anchor="middle">
+                                        @andamentoSaldo[i].Mese
+                                    </text>
+                                }
+                            }
+                        </svg>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Transazioni Recenti -->
+        <section class="transactions-section">
+            <div class="section-header">
+                <h3 class="section-title">
+                    <span class="section-icon">📋</span>
+                    Transazioni Recenti
+                </h3>
+                <a href="/transazioni" class="view-all-link">Vedi tutte →</a>
+            </div>
+            
+            <div class="transactions-table-container">
+                <table class="transactions-table">
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Descrizione</th>
+                            <th>Categoria</th>
+                            <th class="text-right">Importo</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var transazione in transazioniRecenti)
+                        {
+                            <tr>
+                                <td class="date-cell">
+                                    <span class="date-day">@transazione.Data.ToString("dd")</span>
+                                    <span class="date-month">@transazione.Data.ToString("MMM")</span>
+                                </td>
+                                <td class="description-cell">@transazione.Descrizione</td>
+                                <td>
+                                    <span class="category-badge">@transazione.Categoria</span>
+                                </td>
+                                <td class="amount-cell @(transazione.Tipo == TipoTransazione.Entrata ? "income" : "expense")">
+                                    @(transazione.Tipo == TipoTransazione.Entrata ? "+" : "-")@FormatCurrency(transazione.Importo)
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    }
+</div>
+
+@code {
+    private bool isLoading = true;
+    private DashboardKPI? kpi;
+    private List<Transaction> transazioniRecenti = new();
+    private List<SpesaCategoria> speseCategoria = new();
+    private List<SaldoMensile> andamentoSaldo = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDataAsync();
+    }
+
+    private async Task LoadDataAsync()
+    {
+        isLoading = true;
+
+        try
+        {
+            // Carica tutti i dati in parallelo
+            var kpiTask = FinanceService.GetDashboardKPIAsync();
+            var transazioniTask = FinanceService.GetTransazioniRecentiAsync(10);
+            var speseTask = FinanceService.GetSpeseCategoriaAsync();
+            var andamentoTask = FinanceService.GetAndamentoSaldoAsync();
+
+            await Task.WhenAll(kpiTask, transazioniTask, speseTask, andamentoTask);
+
+            kpi = await kpiTask;
+            transazioniRecenti = await transazioniTask;
+            speseCategoria = await speseTask;
+            andamentoSaldo = await andamentoTask;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private string FormatCurrency(decimal amount)
+    {
+        return amount.ToString("N2", new System.Globalization.CultureInfo("it-IT")) + " €";
+    }
+}

@@ -1,0 +1,79 @@
+@inject NavigationManager NavigationManager
+
+<nav class="sidebar @(isExpanded ? "expanded" : "collapsed")">
+    <div class="sidebar-header">
+        <div class="logo">
+            <span class="logo-icon">₿</span>
+            <span class="logo-text">FinanceApp</span>
+        </div>
+        <button class="collapse-btn" @onclick="ToggleSidebar">
+            <span class="collapse-icon">@(isExpanded ? "◀" : "▶")</span>
+        </button>
+    </div>
+
+    <div class="nav-section">
+        <span class="nav-section-title">PRINCIPALE</span>
+        
+        <NavLink class="nav-item" href="/" Match="NavLinkMatch.All">
+            <span class="nav-icon">📊</span>
+            <span class="nav-text">Dashboard</span>
+        </NavLink>
+
+        <NavLink class="nav-item" href="/transazioni">
+            <span class="nav-icon">💳</span>
+            <span class="nav-text">Transazioni</span>
+        </NavLink>
+
+        <NavLink class="nav-item" href="/nuova-transazione">
+            <span class="nav-icon">➕</span>
+            <span class="nav-text">Nuova Transazione</span>
+        </NavLink>
+    </div>
+
+    <div class="nav-section">
+        <span class="nav-section-title">ANALISI</span>
+        
+        <NavLink class="nav-item" href="/report">
+            <span class="nav-icon">📈</span>
+            <span class="nav-text">Report</span>
+        </NavLink>
+
+        <NavLink class="nav-item" href="/budget">
+            <span class="nav-icon">🎯</span>
+            <span class="nav-text">Budget</span>
+        </NavLink>
+    </div>
+
+    <div class="nav-section">
+        <span class="nav-section-title">IMPOSTAZIONI</span>
+        
+        <NavLink class="nav-item" href="/categorie">
+            <span class="nav-icon">🏷️</span>
+            <span class="nav-text">Categorie</span>
+        </NavLink>
+
+        <NavLink class="nav-item" href="/impostazioni">
+            <span class="nav-icon">⚙️</span>
+            <span class="nav-text">Impostazioni</span>
+        </NavLink>
+    </div>
+
+    <div class="sidebar-footer">
+        <div class="user-info">
+            <div class="user-avatar">U</div>
+            <div class="user-details">
+                <span class="user-name">Utente Demo</span>
+                <span class="user-email">demo@finance.app</span>
+            </div>
+        </div>
+    </div>
+</nav>
+
+@code {
+    private bool isExpanded = true;
+
+    private void ToggleSidebar()
+    {
+        isExpanded = !isExpanded;
+    }
+}

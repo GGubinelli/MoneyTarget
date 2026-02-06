@@ -1,0 +1,263 @@
+@page "/nuova-transazione"
+@using FinanceApp.Models
+@using FinanceApp.Services
+@using System.ComponentModel.DataAnnotations
+@inject IFinanceService FinanceService
+@inject NavigationManager NavigationManager
+
+<PageTitle>Nuova Transazione - Finance Manager</PageTitle>
+
+<div class="new-transaction-page">
+    <div class="page-header">
+        <h1 class="page-title">
+            <span class="page-icon">➕</span>
+            Nuova Transazione
+        </h1>
+        <p class="page-subtitle">Inserisci i dettagli della nuova transazione</p>
+    </div>
+
+    <div class="form-container">
+        <EditForm Model="@transazioneModel" OnValidSubmit="@HandleValidSubmit" class="transaction-form">
+            <DataAnnotationsValidator />
+            <ValidationSummary class="validation-summary" />
+
+            <div class="form-grid">
+                <!-- Tipo Transazione -->
+                <div class="form-group tipo-transazione">
+                    <label class="form-label">Tipo Transazione</label>
+                    <div class="tipo-buttons">
+                        <button type="button" 
+                                class="tipo-btn entrata @(transazioneModel.Tipo == TipoTransazione.Entrata ? "active" : "")"
+                                @onclick="() => SetTipo(TipoTransazione.Entrata)">
+                            <span class="tipo-icon">📥</span>
+                            <span class="tipo-text">Entrata</span>
+                        </button>
+                        <button type="button" 
+                                class="tipo-btn uscita @(transazioneModel.Tipo == TipoTransazione.Uscita ? "active" : "")"
+                                @onclick="() => SetTipo(TipoTransazione.Uscita)">
+                            <span class="tipo-icon">📤</span>
+                            <span class="tipo-text">Uscita</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Importo -->
+                <div class="form-group">
+                    <label for="importo" class="form-label">
+                        Importo (€) <span class="required">*</span>
+                    </label>
+                    <div class="input-with-icon">
+                        <span class="input-icon">€</span>
+                        <InputNumber id="importo" 
+                                     @bind-Value="transazioneModel.Importo" 
+                                     class="form-input importo-input"
+                                     placeholder="0.00"
+                                     step="0.01"
+                                     min="0" />
+                    </div>
+                    <ValidationMessage For="@(() => transazioneModel.Importo)" class="validation-message" />
+                </div>
+
+                <!-- Data -->
+                <div class="form-group">
+                    <label for="data" class="form-label">
+                        Data <span class="required">*</span>
+                    </label>
+                    <InputDate id="data" 
+                               @bind-Value="transazioneModel.Data" 
+                               class="form-input" />
+                    <ValidationMessage For="@(() => transazioneModel.Data)" class="validation-message" />
+                </div>
+
+                <!-- Categoria -->
+                <div class="form-group">
+                    <label for="categoria" class="form-label">
+                        Categoria <span class="required">*</span>
+                    </label>
+                    <InputSelect id="categoria" 
+                                 @bind-Value="transazioneModel.Categoria" 
+                                 class="form-input form-select">
+                        <option value="">-- Seleziona Categoria --</option>
+                        @foreach (var categoria in categorie)
+                        {
+                            <option value="@categoria">@categoria</option>
+                        }
+                    </InputSelect>
+                    <ValidationMessage For="@(() => transazioneModel.Categoria)" class="validation-message" />
+                </div>
+
+                <!-- Descrizione -->
+                <div class="form-group full-width">
+                    <label for="descrizione" class="form-label">
+                        Descrizione <span class="required">*</span>
+                    </label>
+                    <InputText id="descrizione" 
+                               @bind-Value="transazioneModel.Descrizione" 
+                               class="form-input"
+                               placeholder="Es: Spesa al supermercato, Stipendio mensile..." />
+                    <ValidationMessage For="@(() => transazioneModel.Descrizione)" class="validation-message" />
+                </div>
+
+                <!-- Note (opzionale) -->
+                <div class="form-group full-width">
+                    <label for="note" class="form-label">Note (opzionale)</label>
+                    <InputTextArea id="note" 
+                                   @bind-Value="transazioneModel.Note" 
+                                   class="form-input form-textarea"
+                                   placeholder="Aggiungi eventuali note o dettagli..."
+                                   rows="3" />
+                </div>
+            </div>
+
+            <!-- Riepilogo -->
+            <div class="form-summary">
+                <h3 class="summary-title">Riepilogo</h3>
+                <div class="summary-content">
+                    <div class="summary-row">
+                        <span class="summary-label">Tipo:</span>
+                        <span class="summary-value @(transazioneModel.Tipo == TipoTransazione.Entrata ? "text-green" : "text-red")">
+                            @(transazioneModel.Tipo == TipoTransazione.Entrata ? "Entrata" : "Uscita")
+                        </span>
+                    </div>
+                    <div class="summary-row">
+                        <span class="summary-label">Importo:</span>
+                        <span class="summary-value @(transazioneModel.Tipo == TipoTransazione.Entrata ? "text-green" : "text-red")">
+                            @(transazioneModel.Tipo == TipoTransazione.Entrata ? "+" : "-")@transazioneModel.Importo.ToString("N2") €
+                        </span>
+                    </div>
+                    <div class="summary-row">
+                        <span class="summary-label">Data:</span>
+                        <span class="summary-value">@transazioneModel.Data.ToString("dd/MM/yyyy")</span>
+                    </div>
+                    @if (!string.IsNullOrEmpty(transazioneModel.Categoria))
+                    {
+                        <div class="summary-row">
+                            <span class="summary-label">Categoria:</span>
+                            <span class="summary-value">@transazioneModel.Categoria</span>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- Bottoni azione -->
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" @onclick="ResetForm">
+                    <span class="btn-icon">🔄</span>
+                    Resetta
+                </button>
+                <button type="button" class="btn btn-outline" @onclick="GoBack">
+                    <span class="btn-icon">←</span>
+                    Annulla
+                </button>
+                <button type="submit" class="btn btn-primary" disabled="@isSubmitting">
+                    @if (isSubmitting)
+                    {
+                        <span class="btn-spinner"></span>
+                        <span>Salvataggio...</span>
+                    }
+                    else
+                    {
+                        <span class="btn-icon">✓</span>
+                        <span>Salva Transazione</span>
+                    }
+                </button>
+            </div>
+        </EditForm>
+    </div>
+
+    <!-- Messaggio di successo -->
+    @if (showSuccessMessage)
+    {
+        <div class="success-toast">
+            <span class="toast-icon">✓</span>
+            <span class="toast-message">Transazione salvata con successo!</span>
+            <button class="toast-close" @onclick="() => showSuccessMessage = false">×</button>
+        </div>
+    }
+</div>
+
+@code {
+    private TransazioneFormModel transazioneModel = new();
+    private List<string> categorie = new();
+    private bool isSubmitting = false;
+    private bool showSuccessMessage = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        categorie = await FinanceService.GetCategorieAsync();
+        transazioneModel.Data = DateTime.Today;
+    }
+
+    private void SetTipo(TipoTransazione tipo)
+    {
+        transazioneModel.Tipo = tipo;
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        isSubmitting = true;
+
+        try
+        {
+            var transazione = new Transaction
+            {
+                Data = transazioneModel.Data,
+                Descrizione = transazioneModel.Descrizione,
+                Categoria = transazioneModel.Categoria,
+                Importo = transazioneModel.Importo,
+                Tipo = transazioneModel.Tipo
+            };
+
+            await FinanceService.AddTransazioneAsync(transazione);
+            
+            showSuccessMessage = true;
+            ResetForm();
+
+            // Nascondi il messaggio dopo 3 secondi
+            await Task.Delay(3000);
+            showSuccessMessage = false;
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private void ResetForm()
+    {
+        transazioneModel = new TransazioneFormModel
+        {
+            Data = DateTime.Today,
+            Tipo = TipoTransazione.Uscita
+        };
+    }
+
+    private void GoBack()
+    {
+        NavigationManager.NavigateTo("/");
+    }
+
+    /// <summary>
+    /// Modello per il form con validazione
+    /// </summary>
+    public class TransazioneFormModel
+    {
+        [Required(ErrorMessage = "La data è obbligatoria")]
+        public DateTime Data { get; set; } = DateTime.Today;
+
+        [Required(ErrorMessage = "La descrizione è obbligatoria")]
+        [StringLength(200, MinimumLength = 3, ErrorMessage = "La descrizione deve essere tra 3 e 200 caratteri")]
+        public string Descrizione { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "La categoria è obbligatoria")]
+        public string Categoria { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "L'importo è obbligatorio")]
+        [Range(0.01, 1000000, ErrorMessage = "L'importo deve essere maggiore di 0")]
+        public decimal Importo { get; set; }
+
+        public TipoTransazione Tipo { get; set; } = TipoTransazione.Uscita;
+
+        public string? Note { get; set; }
+    }
+}
