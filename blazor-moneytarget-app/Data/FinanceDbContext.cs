@@ -4,7 +4,7 @@ using MoneyTarget.Data.Entities;
 namespace MoneyTarget.Data;
 
 /// <summary>
-/// DbContext per l'applicazione Finance Manager
+/// DbContext per l'applicazione MoneyTarget
 /// Configurato per SQL Server
 /// </summary>
 public class FinanceDbContext : DbContext
